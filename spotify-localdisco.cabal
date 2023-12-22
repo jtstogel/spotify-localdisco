@@ -25,7 +25,9 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      App
+      Env
+      Spotify
   other-modules:
       Paths_spotify_localdisco
   autogen-modules:
@@ -34,7 +36,11 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , containers
+    , http-conduit
+    , text
   default-language: Haskell2010
 
 executable spotify-localdisco-exe
@@ -47,8 +53,12 @@ executable spotify-localdisco-exe
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , containers
+    , http-conduit
     , spotify-localdisco
+    , text
   default-language: Haskell2010
 
 test-suite spotify-localdisco-test
@@ -62,6 +72,10 @@ test-suite spotify-localdisco-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , containers
+    , http-conduit
     , spotify-localdisco
+    , text
   default-language: Haskell2010

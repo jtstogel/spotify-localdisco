@@ -4,6 +4,6 @@
 Set up a `.env` file with your credentials. Should look like:
 
 ```
-spotify_client_id={{YOUR_ID}}
-spotify_client_secret={{YOUR_SECRET}}
+SPOTIFY_CLIENT_ID={{YOUR_ID}}
+SPOTIFY_CLIENT_SECRET={{YOUR_SECRET}}
 ```
