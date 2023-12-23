@@ -25,6 +25,7 @@ dependencies:
 - containers
 - http-conduit
 - text
+- mtl
 
 ghc-options:
 - -Wall
