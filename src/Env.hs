@@ -35,9 +35,7 @@ parseLine :: String -> Maybe (String, Text)
 parseLine line = second (T.pack . tail) . flip List.splitAt line <$> List.elemIndex '=' line
 
 parseEnv :: String -> Either String (Map.Map String Text)
-parseEnv text = do
-  keyValues <- eitherFromMaybe "failed to parse env lines" . mapM parseLine . List.lines $ text
-  return $ Map.fromList keyValues
+parseEnv = fmap Map.fromList . eitherFromMaybe "failed to parse env lines" . mapM parseLine . List.lines
 
 eitherIO :: Either String a -> IO a
 eitherIO = either fail return
