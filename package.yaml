@@ -26,6 +26,7 @@ dependencies:
 - http-conduit
 - text
 - mtl
+# - http-types
 
 ghc-options:
 - -Wall
@@ -42,9 +43,18 @@ library:
   source-dirs: src
 
 executables:
-  spotify-localdisco-exe:
+  create-playlist-exe:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         app/create-playlist
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - spotify-localdisco
+  web-exe:
+    main:               Main.hs
+    source-dirs:        app/web
     ghc-options:
     - -threaded
     - -rtsopts
