@@ -1,14 +1,17 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
 module App
-    ( AppState(..)
-    , App
-    ) where
+  ( AppState (..),
+    App,
+  )
+where
 
-import qualified Spotify
 import Control.Monad.Reader (ReaderT)
-
+import qualified Spotify
 
 data AppState = AppState
   { spotifyAuth :: Spotify.ClientCredentials
-  } deriving (Show)
+  }
+  deriving (Show)
 
 type App = ReaderT AppState IO
