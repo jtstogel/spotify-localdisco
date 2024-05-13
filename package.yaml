@@ -26,6 +26,11 @@ dependencies:
 - http-conduit
 - text
 - mtl
+- blaze-html >= 0.9
+- scotty >= 0.12
+- wai-cors
+- wai-extra
+- wai
 # - http-types
 
 ghc-options:

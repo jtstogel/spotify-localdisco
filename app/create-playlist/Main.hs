@@ -8,7 +8,7 @@ import App (App, AppState(..))
 
 program :: App String
 program = do
-    tok <- asks spotifyAuth
+    tok <- asks spotifyCredentials
     return . show $ tok
 
 main :: IO ()
@@ -16,7 +16,7 @@ main = do
     env <- Env.load ".env"
     print env
 
-    token <- Spotify.getAccessToken (Env.spotifyClientID env) (Env.spotifyClientSecret env)
-    let appState = AppState { spotifyAuth = token }
+    token <- Spotify.getClientCredentials (Env.spotifyClientID env) (Env.spotifyClientSecret env)
+    let appState = AppState { spotifyCredentials = token }
     value <- runReaderT program appState
     putStrLn value

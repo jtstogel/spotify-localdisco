@@ -1,0 +1,16 @@
+/* Add a black background color to the top navigation */
+.topnav {
+    background-color: #F4EDEA;
+    display: flex;
+    overflow: hidden;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 12px;
+    width: 100%;
+}
+
+.logo {
+    width: 75px;
+    height: 75px;
+}
