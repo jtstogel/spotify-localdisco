@@ -1,25 +1,19 @@
 import "./Home.css"
-import { Counter } from "../features/counter/Counter"
-import { Quotes } from "../features/quotes/Quotes"
-import logo from "../logo.svg"
 import { useEffect } from "react"
-import * as spotifyAuth from "../features/spotify/spotifyAuth"
-import { store } from "../app/store"
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
+import { selectUserAuthenticated } from "../features/spotify/spotifySlice"
+import { useAppSelector } from "../app/hooks"
 
 const Home = () => {
+  const isAuthenticatedWithSpotify = useAppSelector(selectUserAuthenticated);
+  const navigate = useNavigate();
   useEffect(() => {
-    window.addEventListener(
-      "storage",
-      spotifyAuth.localStorageListener(store, window),
-      false,
-    )
+    if (!isAuthenticatedWithSpotify) {
+      navigate('/spotify/login')
+    }
   }, [])
 
-  return (
-    <div className="App">
-    </div>
-  )
+  return (<div className="App"></div>)
 }
 
 export default Home

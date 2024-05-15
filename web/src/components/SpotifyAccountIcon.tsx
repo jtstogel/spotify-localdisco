@@ -1,20 +1,28 @@
+import './SpotifyAccountIcon.css'
 import { useAppSelector } from '../app/hooks'
-import { selectUserProfile } from '../features/spotify/spotifySlice';
-import { loginViaOAuth2 } from '../features/spotify/spotifyAuth';
-import { store } from '../app/store';
+import { useGetUserProfileQuery } from '../features/spotify/spotifyApiSlice';
+import { selectAuthTokens, SpotifyUserAuthTokens } from '../features/spotify/spotifySlice';
 
 const SpotifyAccountIcon = () => {
-    const userProfile = useAppSelector(selectUserProfile);
-    if (userProfile) {
-        return (
-            <div>
-                <img src={userProfile.profileImageUrl}></img>
-            </div>
-        )
+    const authTokens = useAppSelector(selectAuthTokens);
+    if (!authTokens) {
+        return <></>
     }
+    return <LoggedInSpotifyIcon authTokens={authTokens} />
+};
+
+const LoggedInSpotifyIcon = ({ authTokens }: { authTokens: SpotifyUserAuthTokens }) => {
+    const { data: profile, isLoading, error } = useGetUserProfileQuery({ accessToken: authTokens.accessToken });
+
+    if (!authTokens) {
+        return (<div>not logged in</div>)
+    }
+
+    if (isLoading) return (<></>)
+    if (error) return (<div>{String(error)}</div>)
     return (
         <div>
-            <button onClick={() => loginViaOAuth2(store)}>Login with Spotify</button>
+            <img className="profile-image" src={profile!.profileImageUrl}></img>
         </div>
     )
 };

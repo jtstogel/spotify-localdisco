@@ -86,6 +86,7 @@ appCorsResourcePolicy :: CorsResourcePolicy
 appCorsResourcePolicy =
     simpleCorsResourcePolicy
         { corsMethods = ["OPTIONS", "GET", "PUT", "POST"]
+        , corsRequestHeaders = ["content-type"]
         }
 
 routes :: App.AppState -> IO ()
