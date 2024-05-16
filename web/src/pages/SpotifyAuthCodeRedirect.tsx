@@ -1,26 +1,19 @@
 import { useSearchParams } from "react-router-dom"
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom";
-import { selectUserAuthenticated } from "../features/spotify/spotifySlice";
-import { useSelector } from "react-redux";
-import { useExchangeCodeMutation } from "../features/spotify/spotifyApiSlice";
-
-const exchangedCodes = new Set<string>();
+import { authCodeReceived, selectUserAuthenticated } from "../features/spotify/spotifySlice";
+import { useAppDispatch, useAppSelector } from "../app/hooks";
 
 const SpotifyAuthCodeRedirect = () => {
   const [searchParams] = useSearchParams();
-  const [exchangeCode] = useExchangeCodeMutation();
-  const isAuthenticated = useSelector(selectUserAuthenticated);
+  const isAuthenticated = useAppSelector(selectUserAuthenticated);
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const code = searchParams.get("code") ?? "";
-    const redirectUri = window.origin + window.location.pathname;
-    if (!exchangedCodes.has(code)) {
-      exchangedCodes.add(code)
-      exchangeCode({ code, redirectUri }).unwrap()
-    }
-  }, [searchParams]);
+    dispatch(authCodeReceived(code));
+  }, [searchParams, dispatch]);
 
   useEffect(() => {
     if (isAuthenticated) {

@@ -34,6 +34,7 @@ library
       Types.GetSpotifyUserProfileResponse
       Types.Spotify.TopItems
       Types.Spotify.UserProfile
+      Types.Ticketmaster.SearchEventsRequest
   other-modules:
       Paths_spotify_localdisco
   autogen-modules:

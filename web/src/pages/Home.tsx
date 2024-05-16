@@ -11,7 +11,7 @@ const Home = () => {
     if (!isAuthenticatedWithSpotify) {
       navigate('/spotify/login')
     }
-  }, [])
+  }, [isAuthenticatedWithSpotify, navigate])
 
   return (<div className="App"></div>)
 }

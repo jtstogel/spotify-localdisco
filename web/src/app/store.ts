@@ -2,18 +2,26 @@ import type { Action, ThunkAction } from "@reduxjs/toolkit"
 import { combineSlices, configureStore } from "@reduxjs/toolkit"
 import { setupListeners } from "@reduxjs/toolkit/query"
 import { spotifySlice } from "../features/spotify/spotifySlice"
+import { spotifyAccountsApiSlice } from "../features/spotify/spotifyAccountsApiSlice"
 import { spotifyApiSlice } from "../features/spotify/spotifyApiSlice"
+import { apiSlice } from '../features/api/apiSlice'
+
+function withDebounce(f: () => void, debounceMs: number) {
+  let timeout: number | null = null;
+  return () => {
+    if (timeout !== null) return null;
+    timeout = setTimeout(() => {
+      timeout = null;
+      f();
+    }, debounceMs)
+  };
+}
 
 const STORE_KEY = 'reduxStore';
 
-let saveTimeout: number | null = null;
-const saveStore = () => {
-  if (saveTimeout !== null) return;
-  saveTimeout = setTimeout(() => {
-    saveTimeout = null;
-    return localStorage.setItem(STORE_KEY, JSON.stringify(store.getState()));
-  }, 100)
-};
+export const saveStore = () => {
+  return localStorage.setItem(STORE_KEY, JSON.stringify(store.getState()));
+}
 
 const loadStore = () => {
   return JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') ?? undefined
@@ -21,7 +29,7 @@ const loadStore = () => {
 
 // `combineSlices` automatically combines the reducers using
 // their `reducerPath`s, therefore we no longer need to call `combineReducers`.
-const rootReducer = combineSlices(spotifySlice, spotifyApiSlice)
+const rootReducer = combineSlices(apiSlice, spotifySlice, spotifyApiSlice, spotifyAccountsApiSlice)
 // Infer the `RootState` type from the root reducer
 export type RootState = ReturnType<typeof rootReducer>
 
@@ -33,7 +41,10 @@ export const makeStore = (preloadedState?: Partial<RootState>) => {
     // Adding the api middleware enables caching, invalidation, polling,
     // and other useful features of `rtk-query`.
     middleware: getDefaultMiddleware => {
-      return getDefaultMiddleware().concat(spotifyApiSlice.middleware)
+      return getDefaultMiddleware()
+        .concat(spotifyAccountsApiSlice.middleware)
+        .concat(spotifyApiSlice.middleware)
+        .concat(apiSlice.middleware)
     },
     preloadedState,
   })
@@ -44,7 +55,7 @@ export const makeStore = (preloadedState?: Partial<RootState>) => {
 }
 
 export const store = makeStore(loadStore())
-store.subscribe(saveStore);
+store.subscribe(withDebounce(saveStore, /*debounceMs=*/100));
 
 // Infer the type of `store`
 export type AppStore = typeof store

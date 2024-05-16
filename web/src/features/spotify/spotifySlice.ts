@@ -1,15 +1,9 @@
+import { GetThunkAPI } from "@reduxjs/toolkit";
 import { createAppSlice } from "../../app/createAppSlice"
-import { spotifyApiSlice } from "./spotifyApiSlice"
-
-export interface SpotifyUserAuthTokens {
-    accessToken: string
-
-    // Token for retrieving the next token after expiration.
-    refreshToken: string
-
-    // Expiration time for the token in RFC3339 format.
-    expireTime: string
-}
+import type { SpotifyAuthToken } from "./spotifyAccountsApiSlice";
+import { spotifyAccountsApiSlice } from "./spotifyAccountsApiSlice"
+import type { SpotifyOAuthParams } from "./spotifyOAuth"
+import { createAsyncThunk } from '@reduxjs/toolkit'
 
 export interface SpotifyUserProfile {
     displayName: string
@@ -18,16 +12,15 @@ export interface SpotifyUserProfile {
 
 export interface SpotifyState {
     clientId?: string
-    authTokens?: SpotifyUserAuthTokens
+    oAuthParams?: SpotifyOAuthParams;
+    authTokens?: SpotifyAuthToken
     userProfile?: SpotifyUserProfile
-}
-
-interface OAuth2CodeResponse {
-    code: string;
-    redirectUri: string;
+    exhangedCodes?: string[];
 }
 
 const initialState: SpotifyState = {}
+
+type RootState = { spotify: SpotifyState };
 
 export const spotifySlice = createAppSlice({
     name: "spotify",
@@ -39,38 +32,83 @@ export const spotifySlice = createAppSlice({
         userProfileLoaded: create.reducer<SpotifyUserProfile>((state, { payload }) => {
             state.userProfile = payload
         }),
-        authTokensLoaded: create.reducer<SpotifyUserAuthTokens>((state, { payload }) => {
+        authTokensLoaded: create.reducer<SpotifyAuthToken>((state, { payload }) => {
             state.authTokens = payload
         }),
+        oAuthFlowInitiated: create.reducer<SpotifyOAuthParams>((state, { payload }) => {
+            state.oAuthParams = payload
+        }),
+        codeExhanged: create.reducer<string>((state, { payload }) => {
+            state.exhangedCodes ??= []
+            state.exhangedCodes.push(payload)
+        }),
         authCodeReceived: create.asyncThunk(
-            (response: OAuth2CodeResponse, thunkAPI) => {
-                return thunkAPI.dispatch(spotifyApiSlice.endpoints.exchangeCode.initiate(response))
+            (code: string, thunkAPI) => {
+                const state = (thunkAPI.getState() as RootState);
+                const oAuthParams = state.spotify.oAuthParams;
+                if (!oAuthParams) {
+                    throw new Error('authenticate not requested')
+                }
+                thunkAPI.dispatch(spotifyAccountsApiSlice.endpoints.exchangeCode.initiate({
+                    code,
+                    clientId: oAuthParams.clientId,
+                    redirectUri: oAuthParams.redirectUri,
+                    codeVerifier: oAuthParams.pkceChallenge.codeVerifier,
+                }))
             }
         ),
     }),
     extraReducers: (builder) => {
         builder.addMatcher(
-            spotifyApiSlice.endpoints.exchangeCode.matchFulfilled,
-            (state, { payload: response } ) => {
-                const expireTime = new Date(response.expiresIn * 1000 - 10 + Date.now()).toString()
-                state.authTokens = {
-                    accessToken: response.accessToken,
-                    refreshToken: response.refreshToken,
-                    expireTime,
-                }
+            spotifyAccountsApiSlice.endpoints.exchangeCode.matchFulfilled,
+            (state, { payload: authTokens }) => {
+                state.authTokens = authTokens
             },
         );
     },
     selectors: {
         selectClientId: state => state.clientId,
         selectAuthTokens: state => state.authTokens,
+        selectUserAuthenticated: state => !!state.authTokens,
         selectUserProfile: state => state.userProfile,
-        selectUserAuthenticated: state => !!state.authTokens
+        selectHasExhangedCode: (state, code: string) => !!state.exhangedCodes?.includes(code),
+        selectOAuthParams: state => state.oAuthParams
     },
 })
 
-// Action creators are generated for each case reducer function.
-export const { clientIdLoaded, authTokensLoaded, userProfileLoaded, authCodeReceived } = spotifySlice.actions
+export const {
+    clientIdLoaded,
+    authTokensLoaded,
+    userProfileLoaded,
+    oAuthFlowInitiated,
+} = spotifySlice.actions
 
-// Selectors returned by `slice.selectors` take the root state as their first argument.
-export const { selectClientId, selectAuthTokens, selectUserProfile, selectUserAuthenticated } = spotifySlice.selectors
+export const {
+    selectClientId,
+    selectAuthTokens,
+    selectUserProfile,
+    selectUserAuthenticated,
+    selectHasExhangedCode
+} = spotifySlice.selectors
+
+export const authCodeReceived = createAsyncThunk(
+    'spotify/authCodeReceived',
+    async (code: string, thunkAPI) => {
+        const state = (thunkAPI.getState() as RootState);
+        const oAuthParams = state.spotify.oAuthParams;
+        if (!oAuthParams) {
+            throw new Error('authenticate not requested')
+        }
+
+        // Prevent duplicate exhanges.
+        if (selectHasExhangedCode(state, code)) { return; }
+        thunkAPI.dispatch(spotifySlice.actions.codeExhanged(code));
+
+        thunkAPI.dispatch(spotifyAccountsApiSlice.endpoints.exchangeCode.initiate({
+            code,
+            clientId: oAuthParams.clientId,
+            redirectUri: oAuthParams.redirectUri,
+            codeVerifier: oAuthParams.pkceChallenge.codeVerifier,
+        }))
+    },
+)

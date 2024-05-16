@@ -77,7 +77,7 @@ getTopArtists :: Text -> IO TopItems.TopItemsResponse
 getTopArtists auth = spotifyGet auth "/me/top/artists" [("limit", Just "50")]
 
 getUserProfile :: Text -> IO UserProfile.UserProfileResponse
-getUserProfile creds = spotifyGet creds "/me" []
+getUserProfile auth = spotifyGet auth "/me" []
 
 spotifyGet :: FromJSON r => Text -> String -> Query -> IO r
 spotifyGet token path query = do
