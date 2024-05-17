@@ -32,6 +32,10 @@ library
       Ticketmaster
       Types.GetSpotifyClientIdResponse
       Types.Spotify.TopItems
+<<<<<<< HEAD
+=======
+      Types.Spotify.UserProfile
+>>>>>>> 37679d47ab07c7d3b5f6d5d9972af3a2c5db3756
       Types.Ticketmaster.SearchEventsRequest
   other-modules:
       Paths_spotify_localdisco

@@ -6,8 +6,6 @@ import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
 
--- https://app.ticketmaster.com/discovery/v2/events.json?apikey=9vhnklhpQwMKDWAcuMwTQAfXh57gAMXy&postalCode=94110&radius=10&unit=miles&page=0&size=100&classificationName=music
-
 data DistanceUnit = Miles | Kilometers
 
 data SearchEventsRequest = SearchEventsRequest

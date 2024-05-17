@@ -1,60 +1,38 @@
-import { get } from "../api/api"
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
+import type { SpotifyAuthToken} from "./spotifyAccountsApiSlice";
+import { authorizationHeader } from "./spotifyAccountsApiSlice";
 
-declare interface GetClientIdResponse {
-  clientId: string
-}
-
-export declare interface AuthenticateRequest {
-  code: string
-  redirectUri: string
-}
-
-export declare interface AuthenticateResponse {
-  expiresIn: number
-  accessToken: string
-  refreshToken: string
-}
-
-export interface AccessToken {
-  accessToken: string;
+declare interface ProfileImage {
+    url: string;
 }
 
 export declare interface SpotifyUserProfile {
-  displayName: string
-  profileImageUrl?: string
-}
-
-export async function getUserProfile(
-  accessToken: string,
-): Promise<SpotifyUserProfile> {
-  return get<SpotifyUserProfile>("/spotify/users/me", [["accessToken", accessToken]])
+    displayName: string
+    images?: ProfileImage[];
 }
 
 export const spotifyApiSlice = createApi({
-  baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:8080",
-    mode: 'cors',
-  }),
-  reducerPath: "spotifyApi",
-  keepUnusedDataFor: 5 * 60 * 60,
-  tagTypes: ["Spotify"],
-  endpoints: build => ({
-    getClientId: build.query<string, void>({
-      query: () => '/spotify/clientId',
-      transformResponse: (response: GetClientIdResponse) => response.clientId,
+    baseQuery: fetchBaseQuery({
+        baseUrl: "https://api.spotify.com/v1",
+        mode: 'cors',
     }),
-    getUserProfile: build.query<SpotifyUserProfile, AccessToken>({
-      query: ({ accessToken }) => `/spotify/users/me?accessToken=${accessToken}`,
+    reducerPath: "spotifyApi",
+    keepUnusedDataFor: 5 * 60 * 60,
+    tagTypes: ["Spotify"],
+    endpoints: build => ({
+        getMyProfile: build.query<SpotifyUserProfile, SpotifyAuthToken>({
+            query: (token) => ({
+                url: '/me',
+                headers: { ...authorizationHeader(token) },
+            }),
+            transformResponse: (response: Record<string, any>) => ({
+                displayName: response['display_name'],
+                images: response['images']?.map((image: Record<string, any>) => ({
+                    url: image['url'],
+                })),
+            }),
+        }),
     }),
-    exchangeCode: build.mutation<AuthenticateResponse, AuthenticateRequest>({
-      query: (body: AuthenticateRequest) => ({
-        url: '/spotify/authenticate',
-        method: 'POST',
-        body,
-      }),
-    }),
-  }),
 })
 
-export const { useGetClientIdQuery, useExchangeCodeMutation, useGetUserProfileQuery } = spotifyApiSlice
+export const { useGetMyProfileQuery } = spotifyApiSlice
