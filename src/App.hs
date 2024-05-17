@@ -11,9 +11,11 @@ import Data.Text (Text)
 import qualified Spotify
 
 data AppState = AppState
-  { spotifyCredentials :: Spotify.ClientCredentials,
-    spotifyClientID :: Text,
-    spotifyClientSecret :: Text
+  { spotifyCredentials :: Spotify.ClientCredentials
+  , spotifyClientID :: Text
+  , spotifyClientSecret :: Text
+  , ticketmasterConsumerKey :: Text
+  , ticketmasterConsumerSecret :: Text
   }
   deriving (Show)
 

@@ -12,8 +12,10 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 data Env = Env
-  { spotifyClientID :: Text,
-    spotifyClientSecret :: Text
+  { spotifyClientID :: Text
+  , spotifyClientSecret :: Text
+  , ticketmasterConsumerKey :: Text
+  , ticketmasterConsumerSecret :: Text
   }
   deriving (Show)
 
@@ -21,10 +23,14 @@ buildEnv :: (Monad m) => (String -> m Text) -> m Env
 buildEnv get = do
   sClientID <- get "SPOTIFY_CLIENT_ID"
   sClientSecret <- get "SPOTIFY_CLIENT_SECRET"
+  tConsumerKey <- get "TICKETMASTER_CONSUMER_KEY"
+  tConsumerSecret <- get "TICKETMASTER_CONSUMER_SECRET"
   return $
     Env
-      { spotifyClientID = sClientID,
-        spotifyClientSecret = sClientSecret
+      { spotifyClientID = sClientID
+      , spotifyClientSecret = sClientSecret
+      , ticketmasterConsumerKey = tConsumerKey
+      , ticketmasterConsumerSecret = tConsumerSecret
       }
 
 eitherFromMaybe :: l -> Maybe r -> Either l r

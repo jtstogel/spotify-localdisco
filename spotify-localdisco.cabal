@@ -27,13 +27,12 @@ library
   exposed-modules:
       App
       Env
+      Locations
       Spotify
-      Types.GetSpotifyAuthRequest
-      Types.GetSpotifyAuthResponse
+      Ticketmaster
       Types.GetSpotifyClientIdResponse
-      Types.GetSpotifyUserProfileResponse
       Types.Spotify.TopItems
-      Types.Spotify.UserProfile
+      Types.Ticketmaster.SearchEventsRequest
   other-modules:
       Paths_spotify_localdisco
   autogen-modules:
