@@ -4,12 +4,13 @@ module Main (main) where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
-import Data.List (nub)
-import Data.Sort (sort)
+import Data.List (find)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
+import Data.Time.Clock (getCurrentTime, addUTCTime, nominalDay)
 import Env (Env (spotifyClientID))
-import Errors (eitherStatusIO, eitherIO, ErrStatus(..))
+import Errors (eitherStatusIO, eitherIO, maybeIO, ErrStatus(..))
 import Network.HTTP.Types.Status (Status(statusMessage), status404)
 import Network.Wai                       (Middleware)
 import Network.Wai.Middleware.Cors       (CorsResourcePolicy(..), cors, simpleCorsResourcePolicy)
@@ -21,11 +22,11 @@ import qualified Env
 import qualified Locations
 import qualified Ticketmaster
 import qualified Types.GetSpotifyClientIdResponse as GetSpotifyClientIdResponse
+import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
-import qualified Types.Ticketmaster.SearchEventsResponse as SearchEventsResponse
 import qualified Web.Scotty as S
+import Text.Read (readMaybe)
 import Web.Scotty (ActionM)
-import Data.Time.Clock (getCurrentTime, addUTCTime, nominalDay)
 
 main :: IO ()
 main = do
@@ -61,6 +62,11 @@ getSpotifyClientId appState = do
       { GetSpotifyClientIdResponse.clientId = App.spotifyClientID appState
       }
 
+queryParamMaybe :: LazyText.Text -> ActionM (Maybe LazyText.Text)
+queryParamMaybe name = do
+  params <- S.queryParams
+  return . fmap snd . find ((==name) . fst) $ params
+
 getEvents :: App.AppState -> ActionM ()
 getEvents appState = do
   postalCode <- S.queryParam "postalCode" :: ActionM Text
@@ -70,6 +76,10 @@ getEvents appState = do
   startTime <- liftIO getCurrentTime
   let endTime = addUTCTime ((fromIntegral days) * nominalDay) startTime
 
+  pageToken <- queryParamMaybe "pageToken"
+  let pageNumberMaybe = readMaybe . LazyText.unpack . fromMaybe "0" $ pageToken :: Maybe Int
+  pageNumber <- liftIO . maybeIO "failed to parse pageToken" $ pageNumberMaybe
+
   response <- liftIO $ Ticketmaster.searchEvents (App.ticketmasterConsumerKey appState)
     SearchEventsRequest.SearchEventsRequest
       { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash
@@ -77,11 +87,11 @@ getEvents appState = do
       , SearchEventsRequest.classificationName = ["music"]
       , SearchEventsRequest.startTime = startTime
       , SearchEventsRequest.endTime = endTime
-      , SearchEventsRequest.pageSize = 100
-      , SearchEventsRequest.pageNumber = 0
+      , SearchEventsRequest.pageSize = 200
+      , SearchEventsRequest.pageNumber = pageNumber
       }
 
-  S.json . nub . sort $ SearchEventsResponse.attractionNamesFromResponse response
+  S.json $ ListArtistsResponse.fromSearchEventsResponse response
 
 getGeoHash :: App.AppState -> ActionM ()
 getGeoHash appState = do

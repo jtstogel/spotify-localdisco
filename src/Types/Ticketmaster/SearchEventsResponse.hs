@@ -3,7 +3,8 @@
 
 module Types.Ticketmaster.SearchEventsResponse
   ( SearchEventsResponse(..)
-  , attractionNamesFromResponse
+  , PageObject(..)
+  , EmbeddedResponseDetails(..)
   )
   where
 
@@ -26,7 +27,7 @@ data EmbeddedResponseDetails = EmbeddedResponseDetails
   deriving (Generic, Show)
 
 data SearchEventsResponse = SearchEventsResponse
-  { page :: Maybe PageObject
+  { page :: PageObject
   , _embedded :: EmbeddedResponseDetails
   }
   deriving (Generic, Show)
@@ -38,9 +39,3 @@ instance FromJSON SearchEventsResponse
 instance ToJSON PageObject
 instance ToJSON EmbeddedResponseDetails
 instance ToJSON SearchEventsResponse
-
-attractionNamesFromEvent :: Event.Event -> [Text]
-attractionNamesFromEvent = map Attraction.name . fromMaybe [] . Event.attractions . Event._embedded
-
-attractionNamesFromResponse :: SearchEventsResponse -> [Text]
-attractionNamesFromResponse = concatMap attractionNamesFromEvent . fromMaybe [] . events . _embedded

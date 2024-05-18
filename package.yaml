@@ -23,13 +23,13 @@ dependencies:
 - aeson
 - array
 - base >= 4.7 && < 5
-- blaze-html >= 0.9
+- blaze-html
 - bytestring
 - containers
 - http-conduit
 - http-types
 - mtl
-- scotty >= 0.12
+- scotty
 - sort
 - text
 - time

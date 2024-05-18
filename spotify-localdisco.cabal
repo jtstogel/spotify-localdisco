@@ -36,6 +36,7 @@ library
       Types.Spotify.TopItems
       Types.Ticketmaster.Attraction
       Types.Ticketmaster.Event
+      Types.Ticketmaster.ListArtistsResponse
       Types.Ticketmaster.SearchEventsRequest
       Types.Ticketmaster.SearchEventsResponse
   other-modules:
@@ -49,13 +50,13 @@ library
       aeson
     , array
     , base >=4.7 && <5
-    , blaze-html >=0.9
+    , blaze-html
     , bytestring
     , containers
     , http-conduit
     , http-types
     , mtl
-    , scotty >=0.12
+    , scotty
     , sort
     , text
     , time
@@ -77,13 +78,13 @@ executable web-exe
       aeson
     , array
     , base >=4.7 && <5
-    , blaze-html >=0.9
+    , blaze-html
     , bytestring
     , containers
     , http-conduit
     , http-types
     , mtl
-    , scotty >=0.12
+    , scotty
     , sort
     , spotify-localdisco
     , text
@@ -109,14 +110,14 @@ test-suite spec
       aeson
     , array
     , base >=4.7 && <5
-    , blaze-html >=0.9
+    , blaze-html
     , bytestring
     , containers
     , hspec ==2.*
     , http-conduit
     , http-types
     , mtl
-    , scotty >=0.12
+    , scotty
     , sort
     , spotify-localdisco
     , text
