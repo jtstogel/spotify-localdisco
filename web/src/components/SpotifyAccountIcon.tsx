@@ -19,7 +19,9 @@ const LoggedInSpotifyIcon = ({ authTokens }: { authTokens: SpotifyAuthToken }) =
     }
 
     if (isLoading) { return (<></>) }
-    if (error) { return (<div>{String(error)}</div>) }
+    if (error) {
+        return (<div>authentication failed!</div>)
+    }
     const imageUrl = profile?.images?.[0]?.url;
 
     return (

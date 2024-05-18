@@ -2,8 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use newtype instead of data" #-}
-
 module Spotify
   ( AuthorizationToken(..),
     ClientCredentials,
@@ -18,7 +16,6 @@ import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics
 import Network.HTTP.Conduit (urlEncodedBody)
 import Network.HTTP.Simple
-import Data.Maybe (fromJust)
 import qualified Types.Spotify.TopItems as TopItems
 
 baseURL :: String
@@ -34,7 +31,7 @@ data AuthorizationToken = AuthorizationToken
   }
   deriving (Generic, Show)
 
-data ClientCredentials = ClientCredentials Text deriving (Show)
+newtype ClientCredentials = ClientCredentials Text deriving (Show)
 
 data AccessTokenResponse = AccessTokenResponse
   { access_token :: Text,

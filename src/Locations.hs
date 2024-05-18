@@ -1,33 +1,50 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Locations
-  ( lookupGeoHash
-  , load
+  ( buildPostalCodeLookup
+  , lookupGeoHash
+  , LatLon(..)
+  , PostalCodeLookup(..)
+  , PostalCodeLocation(..)
   )
 where
 
+import Data.Aeson
 import Data.Text (Text)
+import Errors (eitherFromMaybe)
+import GHC.Generics
 import qualified Data.Map as M
+import qualified GeoHash as G
 
-data PostalCodeLocationEntry = PostalCodeLocationEntry
+data PostalCodeLocation = PostalCodeLocation
     { postalCode :: Text
-    , lat :: Double
-    , lon :: Double
+    , coordinate :: LatLon
     }
+    deriving (Generic)
+
+instance FromJSON PostalCodeLocation
 
 data LatLon = LatLon
-    { latitude :: Double
-    , longitude :: Double
+    { lat :: Double
+    , lon :: Double
     }
+    deriving (Generic, Show)
+
+instance FromJSON LatLon
 
 data PostalCodeLookup = PostalCodeLookup
-    { entries :: M.Map Text LatLon
+    { lookupEntries :: M.Map Text LatLon
     }
+    deriving (Show)
 
-load :: Text -> IO PostalCodeLookup
-load dataJsonFile = return $ PostalCodeLookup { entries = M.empty }
+postalCodeMap :: [PostalCodeLocation] -> M.Map Text LatLon
+postalCodeMap = M.fromList . map (\e -> (postalCode e, coordinate e))
 
-lookupGeoHash :: PostalCodeLookup -> Text -> Text
-lookupGeoHash translator postalCode = ""
+buildPostalCodeLookup :: [PostalCodeLocation] -> PostalCodeLookup
+buildPostalCodeLookup entries = PostalCodeLookup { lookupEntries = postalCodeMap entries }
+
+lookupGeoHash :: PostalCodeLookup -> Text -> Either String String
+lookupGeoHash postalLookup code = do
+    latLon <- eitherFromMaybe "postal code not found" $ M.lookup code (lookupEntries postalLookup)
+    return $ G.geoHash (lat latLon, lon latLon)

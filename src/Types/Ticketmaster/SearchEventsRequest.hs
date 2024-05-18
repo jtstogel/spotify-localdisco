@@ -1,21 +1,19 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Types.Ticketmaster.SearchEventsRequest where
+module Types.Ticketmaster.SearchEventsRequest
+  ( SearchEventsRequest(..)
+  )
+  where
 
-import Data.Aeson
 import Data.Text (Text)
-import GHC.Generics
-
-data DistanceUnit = Miles | Kilometers
+import Data.Time.Clock (UTCTime)
 
 data SearchEventsRequest = SearchEventsRequest
-  { geoHash :: Text              -- 
-  , radius :: Int                -- Search radius around geoHash (use with `unit`)
-  , unit :: DistanceUnit         -- Unit for radius.
-  , startDateTime :: Text        -- RFC3339 start date
-  , endDateTime :: Text          -- RFC3339 end date
-  , size :: Int                  -- Page size
-  , page :: Int                  -- Page number
+  { geoHash :: Text              -- Location to search near. Maximum 9 characters.
+  , radiusMiles :: Int           -- Search radius around geoHash.
   , classificationName :: [Text] -- Event classification (eg "music")
-  , apikey :: Text               -- Client API key
+  , startTime :: UTCTime
+  , endTime :: UTCTime
+  , pageSize :: Int
+  , pageNumber :: Int
   }

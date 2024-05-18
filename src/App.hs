@@ -9,13 +9,14 @@ where
 import Control.Monad.Reader (ReaderT)
 import Data.Text (Text)
 import qualified Spotify
+import qualified Locations
 
 data AppState = AppState
-  { spotifyCredentials :: Spotify.ClientCredentials
-  , spotifyClientID :: Text
+  { spotifyClientID :: Text
   , spotifyClientSecret :: Text
   , ticketmasterConsumerKey :: Text
   , ticketmasterConsumerSecret :: Text
+  , postalCodeLookup :: Locations.PostalCodeLookup
   }
   deriving (Show)
 

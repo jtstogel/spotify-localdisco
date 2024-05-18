@@ -9,7 +9,7 @@ const SpotifyLogin = () => {
     const dispatch = useAppDispatch();
 
     if (isLoading) { return <></> }
-    if (error) { return <div>{String(error)}</div> }
+    if (error) { return <div>client load failed: {JSON.stringify(error)}</div> }
 
     const login = async () => {
         const oAuthParams = await generateOAuthParams(clientId!)

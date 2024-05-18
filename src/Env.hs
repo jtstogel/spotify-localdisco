@@ -5,10 +5,10 @@ module Env
 where
 
 import Data.Either ()
+import Data.Text (Text)
+import Errors (eitherIO, eitherFromMaybe)
 import qualified Data.List as List
 import qualified Data.Map as Map
-import Data.Maybe (fromMaybe)
-import Data.Text (Text)
 import qualified Data.Text as T
 
 data Env = Env
@@ -33,9 +33,6 @@ buildEnv get = do
       , ticketmasterConsumerSecret = tConsumerSecret
       }
 
-eitherFromMaybe :: l -> Maybe r -> Either l r
-eitherFromMaybe = (. fmap Right) . fromMaybe . Left
-
 second :: (b -> b') -> (a, b) -> (a, b')
 second f (a, b) = (a, f b)
 
@@ -44,9 +41,6 @@ parseLine line = second (T.pack . tail) . flip List.splitAt line <$> List.elemIn
 
 parseEnv :: String -> Either String (Map.Map String Text)
 parseEnv = fmap Map.fromList . eitherFromMaybe "failed to parse env lines" . mapM parseLine . List.lines
-
-eitherIO :: Either String a -> IO a
-eitherIO = either fail return
 
 load :: String -> IO Env
 load filename = do
