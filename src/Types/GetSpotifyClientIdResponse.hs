@@ -6,8 +6,8 @@ import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
 
-newtype GetSpotifyClientIdResponse = GetSpotifyClientIdResponse
-  { clientId :: Text
+data GetSpotifyClientIdResponse = GetSpotifyClientIdResponse
+  { clientId :: !Text
   }
   deriving (Generic)
 

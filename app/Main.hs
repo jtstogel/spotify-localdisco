@@ -5,6 +5,7 @@ module Main (main) where
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.List (find)
+import Debug.Trace
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
@@ -25,6 +26,7 @@ import qualified Spotify
 import qualified Ticketmaster
 import qualified Types.GetSpotifyClientIdResponse as GetSpotifyClientIdResponse
 import qualified Types.Spotify.ListTopItemsRequest as ListTopItemsRequest
+import qualified Types.Spotify.Track as Track
 import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import qualified Web.Scotty as S
@@ -123,6 +125,28 @@ getTopTracks appState = do
   tracks <- liftIO $ CreatePlaylist.getTopTracks auth limit
   S.json $ tracks
 
+discoverSpotify :: App.AppState -> ActionM ()
+discoverSpotify appState = do
+  auth <- S.queryParam "spotifyAccessToken" :: ActionM  Text
+  postalCode <- S.queryParam "postalCode" :: ActionM Text
+  radiusMiles <- S.queryParam "radiusMiles" :: ActionM Int
+  days <- S.queryParam "days" :: ActionM Int
+
+  geoHash <- liftIO $ eitherStatusIO status404 $ Locations.lookupGeoHash (App.postalCodeLookup appState) postalCode
+  startTime <- liftIO getCurrentTime
+  let endTime = addUTCTime ((fromIntegral days) * nominalDay) startTime
+
+  let eventsReq = SearchEventsRequest.SearchEventsRequest { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash
+                                                          , SearchEventsRequest.radiusMiles = radiusMiles
+                                                          , SearchEventsRequest.classificationName = ["music"]
+                                                          , SearchEventsRequest.startTime = startTime
+                                                          , SearchEventsRequest.endTime = endTime
+                                                          , SearchEventsRequest.pageSize = 200
+                                                          , SearchEventsRequest.pageNumber = 0
+                                                          }
+  discovery <- liftIO $ CreatePlaylist.discoverSpotify appState auth eventsReq
+  S.json $ discovery
+
 allowCors :: Middleware
 allowCors = cors (const $ Just appCorsResourcePolicy)
 
@@ -144,3 +168,4 @@ routes appState = S.scotty 8080 $ do
   S.get "/geohash" $ getGeoHash appState
   S.get "/placeName" $ getPlaceName appState
   S.get "/localArtists" $ getEvents appState
+  S.get "/discover" $ discoverSpotify appState

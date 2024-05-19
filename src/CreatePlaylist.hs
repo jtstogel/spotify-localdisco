@@ -1,32 +1,44 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module CreatePlaylist
-  ( getTopArtists
+  ( discoverSpotify
+  , getTopArtists
   , getTopTracks
   , searchEvents
+  , recommendationsForTrack
   )
   where
 
-import Data.List (reverse)
 import Control.Monad (when)
+import Data.List (reverse, sort, nub)
 import Data.Maybe (fromMaybe)
+import Debug.Trace (traceShowId)
 import qualified App as App
+import qualified Data.Text as T
 import qualified Spotify as Spotify
+import qualified Ticketmaster as Ticketmaster
 import qualified Types.Spotify.Artist as Artist
-import qualified Types.Spotify.Track as Track
+import qualified Types.Spotify.GetRecommendationsRequest as GetRecommendationsRequest
+import qualified Types.Spotify.GetRecommendationsResponse as GetRecommendationsResponse
+import qualified Types.Spotify.ListFollowedArtistsRequest as ListFollowedArtistsRequest
+import qualified Types.Spotify.ListFollowedArtistsResponse as ListFollowedArtistsResponse
+import qualified Types.Spotify.ListSavedTracksRequest as ListSavedTracksRequest
+import qualified Types.Spotify.ListSavedTracksResponse as ListSavedTracksResponse
 import qualified Types.Spotify.ListTopItemsRequest as ListTopItemsRequest
 import qualified Types.Spotify.TopArtistsResponse as TopArtistsResponse
 import qualified Types.Spotify.TopTracksResponse as TopTracksResponse
-import qualified Types.Ticketmaster.SearchEventsResponse as SearchEventsResponse
-import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
+import qualified Types.Spotify.Track as Track
+import qualified Types.SpotifyDiscovery as SpotifyDiscovery
+import qualified Types.Ticketmaster.Attraction as Attraction
 import qualified Types.Ticketmaster.Event as Event
-import qualified Ticketmaster as Ticketmaster
-import qualified Data.Text as T
+import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
+import qualified Types.Ticketmaster.SearchEventsResponse as SearchEventsResponse
 
 data Playlist = Playlist
   { tracks :: [Track.Track]
   }
 
+-- Gets n items from a List API.
 listN :: (Monad m) => (req -> m res) -> (req -> res -> Maybe req) -> (res -> [item]) -> req -> Int -> m [item]
 listN list makeNextRequest getItems req n = do
     res <- list req
@@ -52,8 +64,7 @@ getTopArtists auth = listN (Spotify.listTopArtists auth) makeNextRequest getItem
         getItems = fromMaybe [] . TopArtistsResponse.items
         makeNextRequest req res = do
             let count = length . fromMaybe [] . TopArtistsResponse.items $ res
-            when (count == 0)
-                mempty
+            when (count == 0) Nothing
             let offset = fromMaybe 0 $ TopArtistsResponse.offset res
             Just $ req { ListTopItemsRequest.offset = Just $ count + offset }
 
@@ -62,10 +73,59 @@ getTopTracks auth = listN (Spotify.listTopTracks auth) makeNextRequest getItems 
     where
         getItems = fromMaybe [] . TopTracksResponse.items
         makeNextRequest req res = do
-            let count = length . fromMaybe [] . TopTracksResponse.items $ res
+            let count = length . getItems $ res
             when (count == 0) Nothing
             let offset = fromMaybe 0 $ TopTracksResponse.offset res
             Just $ req { ListTopItemsRequest.offset = Just $ count + offset }
+
+initialSavedTracksRequest = ListSavedTracksRequest.ListSavedTracksRequest
+  { ListSavedTracksRequest.limit = Just 50
+  , ListSavedTracksRequest.offset = Nothing
+  }
+
+getSavedTracks :: T.Text -> Int -> IO [Track.Track]
+getSavedTracks auth = listN (Spotify.listSavedTracks auth) makeNextRequest getItems initialSavedTracksRequest
+    where
+        getItems = map ListSavedTracksResponse.track . fromMaybe [] . ListSavedTracksResponse.items
+        makeNextRequest req res = do
+            let count = length . getItems $ res
+            when (count == 0) Nothing
+            let offset = fromMaybe 0 $ ListSavedTracksResponse.offset res
+            Just $ req { ListSavedTracksRequest.offset = Just $ count + offset }
+
+initialFollowedArtistsRequest = ListFollowedArtistsRequest.ListFollowedArtistsRequest
+  { ListFollowedArtistsRequest.after = Nothing
+  , ListFollowedArtistsRequest.limit = Just 50 }
+
+getFollowedArtists :: T.Text -> Int -> IO [Artist.Artist]
+getFollowedArtists auth = listN (Spotify.listFollowedArtists auth) makeNextRequest getItems initialFollowedArtistsRequest
+    where
+        getItems = fromMaybe [] . (>>= ListFollowedArtistsResponse.items) . ListFollowedArtistsResponse.artists
+        makeNextRequest req res = do
+            artists <- ListFollowedArtistsResponse.artists res
+            cursor <- ListFollowedArtistsResponse.cursor artists
+            after <- ListFollowedArtistsResponse.after cursor
+            when (after == "") Nothing
+            Just $ req { ListFollowedArtistsRequest.after = Just after }
+
+getRecommendations :: T.Text -> GetRecommendationsRequest.GetRecommendationsRequest -> IO [Track.Track]
+getRecommendations auth = fmap GetRecommendationsResponse.tracks . Spotify.getRecommendations auth
+
+recommendationsForTrack :: T.Text -> Int -> Track.Track -> IO [Track.Track]
+recommendationsForTrack auth limit track = getRecommendations auth (traceShowId
+  (GetRecommendationsRequest.GetRecommendationsRequest
+    { GetRecommendationsRequest.seedTracks = (traceShowId [Track.id track])
+    , GetRecommendationsRequest.seedArtists = []
+    , GetRecommendationsRequest.limit = limit
+    })
+  )
+
+recommendationsForArtist :: T.Text -> Int -> Artist.Artist -> IO [Track.Track]
+recommendationsForArtist auth limit artist = getRecommendations auth (GetRecommendationsRequest.GetRecommendationsRequest
+    { GetRecommendationsRequest.seedArtists = [Artist.id artist]
+    , GetRecommendationsRequest.seedTracks = []
+    , GetRecommendationsRequest.limit = limit
+    })
 
 searchEvents :: T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> IO [Event.Event]
 searchEvents auth = listN (Ticketmaster.searchEvents auth) makeNextRequest getItems
@@ -79,7 +139,30 @@ searchEvents auth = listN (Ticketmaster.searchEvents auth) makeNextRequest getIt
                 then Nothing
                 else Just $ req { SearchEventsRequest.pageNumber = pageNumber + 1 }
 
+attractionNamesFromEvent :: Event.Event -> [T.Text]
+attractionNamesFromEvent = map Attraction.name . fromMaybe [] . Event.attractions . Event._embedded
 
--- discoverTracks :: App.AppState -> Text -> Coroutine (Yield String) IO Playlist
--- discoverTracks appState spotifyAuth = do
---     topArtists <- Spotify.listTopArtists spotifyAuth ListTopItemsRequest
+discoverSpotify :: App.AppState -> T.Text -> SearchEventsRequest.SearchEventsRequest -> IO SpotifyDiscovery.SpotifyDiscovery
+discoverSpotify appState spotifyAuth eventsRequest = do
+    -- You're only allowed to get 1000 events from the Ticketmaster API...
+    events <- searchEvents (App.ticketmasterConsumerKey appState) eventsRequest 1000
+
+    topArtists <- getTopArtists spotifyAuth 100
+    topTracks <- getTopTracks spotifyAuth 100
+    followedArtists <- getFollowedArtists spotifyAuth 100
+    savedTracks <- getSavedTracks spotifyAuth 100
+
+    -- For the top 20 tracks and artists, spider to get more tracks based on Spotify's recommendations.
+    tracksFromTopTracks <- mapM (recommendationsForTrack spotifyAuth 20) (take 20 topTracks)
+    tracksFromTopArtists <- mapM (recommendationsForArtist spotifyAuth 20) (take 20 topArtists)
+
+    let tracks = topTracks ++ savedTracks ++ (concat tracksFromTopTracks) ++ (concat tracksFromTopArtists)
+    let artists = topArtists ++ followedArtists ++ concatMap (fromMaybe [] . Track.artists) tracks
+
+    let spotifyArtists = nub . sort . map Artist.name $ artists
+    let ticketmasterArtists = nub . sort . concatMap attractionNamesFromEvent $ events
+
+    return $ SpotifyDiscovery.SpotifyDiscovery
+        { SpotifyDiscovery.spotifyArtists = spotifyArtists
+        , SpotifyDiscovery.ticketmasterArtists = ticketmasterArtists
+        }

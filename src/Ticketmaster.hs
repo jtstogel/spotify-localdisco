@@ -13,6 +13,7 @@ import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format (formatTime, defaultTimeLocale, FormatTime)
+import Debug.Trace
 import Errors (throwErr, eitherStatusIO, mapLeft)
 import HTTP (queryParam)
 import Network.HTTP.Simple
@@ -41,12 +42,12 @@ searchEvents apiKey req = ticketmasterGet "/events.json" $
 timeString :: FormatTime t => t -> String
 timeString = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 
-ticketmasterGet :: FromJSON r => String -> Query -> IO r
+ticketmasterGet :: (FromJSON r, Show r) => String -> Query -> IO r
 ticketmasterGet path query = do
   let requestWithHeaders = setRequestQueryString query $ parseRequest_ (baseURL ++ path)
-  response <- httpJSONEither requestWithHeaders
+  response <- httpJSONEither (traceShowId requestWithHeaders)
 
-  when ((getResponseStatusCode response) /= 200) $
+  when ((getResponseStatusCode (traceShowId response)) /= 200) $
     throwErr (getResponseStatus response) ("failed to get" ++ path)
 
   eitherStatusIO status500 $ mapLeft show $ getResponseBody response

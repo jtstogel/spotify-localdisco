@@ -12,6 +12,7 @@ import GHC.Generics
 data Artist = Artist
   { name :: Text
   , href :: Text
+  , id :: Text
   }
   deriving (Generic, Show)
 

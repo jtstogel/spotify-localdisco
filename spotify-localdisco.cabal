@@ -36,10 +36,17 @@ library
       Ticketmaster
       Types.GetSpotifyClientIdResponse
       Types.Spotify.Artist
+      Types.Spotify.GetRecommendationsRequest
+      Types.Spotify.GetRecommendationsResponse
+      Types.Spotify.ListFollowedArtistsRequest
+      Types.Spotify.ListFollowedArtistsResponse
+      Types.Spotify.ListSavedTracksRequest
+      Types.Spotify.ListSavedTracksResponse
       Types.Spotify.ListTopItemsRequest
       Types.Spotify.TopArtistsResponse
       Types.Spotify.TopTracksResponse
       Types.Spotify.Track
+      Types.SpotifyDiscovery
       Types.Ticketmaster.Attraction
       Types.Ticketmaster.Event
       Types.Ticketmaster.ListArtistsResponse

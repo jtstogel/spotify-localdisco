@@ -11,9 +11,9 @@ import GHC.Generics
 import qualified Types.Spotify.Artist as Artist
 
 data ListTopItemsRequest = ListTopItemsRequest
-  { timeRange :: Maybe Text
-  , limit :: Maybe Int
-  , offset :: Maybe Int
+  { timeRange :: !(Maybe Text)
+  , limit :: !(Maybe Int)
+  , offset :: !(Maybe Int)
   }
   deriving (Generic, Show)
 
