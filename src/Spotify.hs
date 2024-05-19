@@ -3,20 +3,27 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Spotify
-  ( AuthorizationToken(..),
-    ClientCredentials,
-    getClientCredentials,
-    getTopArtists,
+  ( AuthorizationToken(..)
+  , ClientCredentials
+  , getClientCredentials
+  , listTopTracks
+  , listTopArtists
   )
 where
 
+import Control.Monad (when)
 import Data.Aeson
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
+import Errors (throwErr)
 import GHC.Generics
+import HTTP (queryParam)
 import Network.HTTP.Conduit (urlEncodedBody)
 import Network.HTTP.Simple
-import qualified Types.Spotify.TopItems as TopItems
+import Network.HTTP.Types.Status (status500)
+import qualified Types.Spotify.ListTopItemsRequest as ListTopItemsRequest
+import qualified Types.Spotify.TopArtistsResponse as TopArtistsResponse
+import qualified Types.Spotify.TopTracksResponse as TopTracksResponse
 
 baseURL :: String
 baseURL = "https://api.spotify.com/v1"
@@ -49,11 +56,25 @@ getClientCredentials clientID secret = do
   response <- httpJSON requestWithHeaders :: IO (Response AccessTokenResponse)
   return $ ClientCredentials $ access_token $ getResponseBody response
 
-getTopArtists :: Text -> IO TopItems.TopItemsResponse
-getTopArtists auth = spotifyGet auth "/me/top/artists" [("limit", Just "50")]
+topItemsQuery :: ListTopItemsRequest.ListTopItemsRequest -> Query
+topItemsQuery req =
+  [ ("limit",      (>>= queryParam) $ ListTopItemsRequest.limit req)
+  , ("offset",     (>>= queryParam) $ ListTopItemsRequest.offset req)
+  , ("time_range", (>>= queryParam) $ ListTopItemsRequest.timeRange req)
+  ]
+
+listTopArtists :: Text -> ListTopItemsRequest.ListTopItemsRequest -> IO TopArtistsResponse.TopArtistsResponse
+listTopArtists auth req = spotifyGet auth "/me/top/artists" (topItemsQuery req)
+
+listTopTracks :: Text -> ListTopItemsRequest.ListTopItemsRequest -> IO TopTracksResponse.TopTracksResponse
+listTopTracks auth req = spotifyGet auth "/me/top/tracks" (topItemsQuery req)
 
 spotifyGet :: FromJSON r => Text -> String -> Query -> IO r
 spotifyGet token path query = do
   let requestWithHeaders = setRequestQueryString query $ setRequestBearerAuth (encodeUtf8 token) $ parseRequest_ (baseURL ++ path)
   response <- httpJSON requestWithHeaders
+
+  when ((getResponseStatusCode response) /= 200) $
+    throwErr (getResponseStatus response) ("failed to get" ++ path)
+
   return $ getResponseBody response

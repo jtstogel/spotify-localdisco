@@ -3,7 +3,7 @@
 
 module Types.Ticketmaster.ListArtistsResponse
   ( ListArtistsResponse(..)
-  , fromSearchEventsResponse
+  , fromEvents
   )
   where
 
@@ -29,19 +29,8 @@ instance ToJSON ListArtistsResponse
 attractionNamesFromEvent :: Event.Event -> [Text]
 attractionNamesFromEvent = map Attraction.name . fromMaybe [] . Event.attractions . Event._embedded
 
-attractionNamesFromResponse :: SearchEventsResponse.SearchEventsResponse -> [Text]
-attractionNamesFromResponse = concatMap attractionNamesFromEvent . fromMaybe [] . SearchEventsResponse.events . SearchEventsResponse._embedded
-
-nextPageNumber :: SearchEventsResponse.SearchEventsResponse -> Maybe Int
-nextPageNumber r
-  | pageNumber + 1 == totalPages = Nothing
-  | otherwise = Just $ pageNumber + 1
-  where
-    pageNumber = SearchEventsResponse.number . SearchEventsResponse.page $ r
-    totalPages = SearchEventsResponse.totalPages . SearchEventsResponse.page $ r
-
-fromSearchEventsResponse :: SearchEventsResponse.SearchEventsResponse -> ListArtistsResponse
-fromSearchEventsResponse r = ListArtistsResponse
-  { nextPageToken = fmap (T.pack . show) . nextPageNumber $ r
-  , artists = nub . sort . attractionNamesFromResponse $ r
+fromEvents :: [Event.Event] -> ListArtistsResponse
+fromEvents r = ListArtistsResponse
+  { nextPageToken = Nothing
+  , artists = nub . sort . concatMap attractionNamesFromEvent $ r
   }

@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE FlexibleInstances #-}
 
 module Ticketmaster
   ( searchEvents
@@ -12,46 +11,32 @@ import Control.Monad (when)
 import Data.Aeson
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
-import Data.Time.Format (formatTime, defaultTimeLocale, FormatTime)
 import Data.Time.Clock (UTCTime)
-import Network.HTTP.Simple
+import Data.Time.Format (formatTime, defaultTimeLocale, FormatTime)
 import Errors (throwErr, eitherStatusIO, mapLeft)
+import HTTP (queryParam)
+import Network.HTTP.Simple
+import Network.HTTP.Types.Status (status500)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import qualified Types.Ticketmaster.SearchEventsResponse as SearchEventsResponse
-import Network.HTTP.Types.Status (status500)
 
 baseURL :: String
 baseURL = "https://app.ticketmaster.com/discovery/v2"
 
-class QueryParam a where
-  qp :: a -> Maybe B.ByteString
-
-instance QueryParam String where
-  qp = qp . T.pack
-
-instance QueryParam Text where
-  qp = Just . encodeUtf8
-
-instance QueryParam Int where
-  qp = qp . show
-
-instance QueryParam UTCTime where
-  qp = qp . timeString
-
 searchEvents :: Text -> SearchEventsRequest.SearchEventsRequest -> IO SearchEventsResponse.SearchEventsResponse
 searchEvents apiKey req = ticketmasterGet "/events.json" $
-  [ ("apikey",        qp apiKey)
-  , ("geoPoint",      qp . SearchEventsRequest.geoHash $ req)
-  , ("radius",        qp . SearchEventsRequest.radiusMiles $ req)
-  , ("unit",          qp ("miles" :: Text))
-  , ("startDateTime", qp . SearchEventsRequest.startTime $ req)
-  , ("endDateTime",   qp . SearchEventsRequest.endTime $ req)
-  , ("size",          qp . SearchEventsRequest.pageSize $ req)
-  , ("page",          qp . SearchEventsRequest.pageNumber $ req)
+  [ ("apikey",        queryParam apiKey)
+  , ("geoPoint",      queryParam . SearchEventsRequest.geoHash $ req)
+  , ("radius",        queryParam . SearchEventsRequest.radiusMiles $ req)
+  , ("unit",          queryParam ("miles" :: Text))
+  , ("startDateTime", queryParam . timeString . SearchEventsRequest.startTime $ req)
+  , ("endDateTime",   queryParam . timeString . SearchEventsRequest.endTime $ req)
+  , ("size",          queryParam . SearchEventsRequest.pageSize $ req)
+  , ("page",          queryParam . SearchEventsRequest.pageNumber $ req)
   ] <>
-  map (("classificationName",) . qp) (SearchEventsRequest.classificationName req)
+  map (("classificationName",) . queryParam) (SearchEventsRequest.classificationName req)
 
 timeString :: FormatTime t => t -> String
 timeString = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
@@ -62,6 +47,6 @@ ticketmasterGet path query = do
   response <- httpJSONEither requestWithHeaders
 
   when ((getResponseStatusCode response) /= 200) $
-    throwErr (getResponseStatus response) "failed to search events"
+    throwErr (getResponseStatus response) ("failed to get" ++ path)
 
   eitherStatusIO status500 $ mapLeft show $ getResponseBody response

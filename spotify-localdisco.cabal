@@ -26,14 +26,20 @@ source-repository head
 library
   exposed-modules:
       App
+      CreatePlaylist
       Env
       Errors
       GeoHash
+      HTTP
       Locations
       Spotify
       Ticketmaster
       Types.GetSpotifyClientIdResponse
-      Types.Spotify.TopItems
+      Types.Spotify.Artist
+      Types.Spotify.ListTopItemsRequest
+      Types.Spotify.TopArtistsResponse
+      Types.Spotify.TopTracksResponse
+      Types.Spotify.Track
       Types.Ticketmaster.Attraction
       Types.Ticketmaster.Event
       Types.Ticketmaster.ListArtistsResponse

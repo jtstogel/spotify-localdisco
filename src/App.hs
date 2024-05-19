@@ -8,7 +8,6 @@ where
 
 import Control.Monad.Reader (ReaderT)
 import Data.Text (Text)
-import qualified Spotify
 import qualified Locations
 
 data AppState = AppState
