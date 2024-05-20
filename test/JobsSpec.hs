@@ -25,13 +25,12 @@ testJob = do
 
 runTestJob :: IO Job.Job
 runTestJob = do
-  v <- newEmptyMVar :: IO (MVar ())
-
   db <- Jobs.newDB
 
+  v <- newEmptyMVar :: IO (MVar ())
   _ <- Jobs.runJobFinally db "jobs/testJob" (putMVar v ()) testJob
-
   takeMVar v
+
   Jobs.getJob db "jobs/testJob"
 
 spec :: Spec
