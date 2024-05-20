@@ -12,8 +12,9 @@ import Control.Monad (when)
 import Data.Aeson
 import Data.ByteString (ByteString)
 import Data.Maybe (fromMaybe)
-import Data.Text (Text, pack)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text (Text, pack, unpack)
+import Text.Read (readMaybe)
+import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import Debug.Trace (traceShowId)
 import Errors
 import Network.HTTP.Simple
@@ -34,18 +35,32 @@ instance QueryParam Int where
 instance (QueryParam a) => QueryParam (Maybe a) where
   queryParam = (>>= queryParam)
 
+maybeHead :: [a] -> Maybe a
+maybeHead []  = Nothing
+maybeHead (x:_) = Just x
+
+retryAfter :: Response a -> Maybe Int
+retryAfter response = do
+  header <- maybeHead $ getResponseHeader "Retry-After" response
+  seconds <- readMaybe . unpack $ decodeUtf8 header
+
+  -- Cap at 30 seconds. We don't have all day.
+  return $ if seconds > 30
+    then 30
+    else seconds
 
 getWithAttempts :: (FromJSON r, Show r) => Int -> Request -> IO r
 getWithAttempts 0 _ = throwErr status500 ("retried maximum number of times")
 getWithAttempts attempts request = do
   response <- httpJSONEither (traceShowId request)
-  let code = getResponseStatusCode response
+  let code = getResponseStatusCode (traceShowId response)
 
   let shouldRetry = code `elem` [429, 500]
   let ok = code `elem` [200]
 
   let result | shouldRetry = do
-                   threadDelay 10000000
+                   let delaySeconds = fromMaybe 5 $ retryAfter response
+                   threadDelay $ delaySeconds * 1000000
                    getWithAttempts (attempts - 1) request
              | ok          = eitherStatusIO status500 . mapLeft show . getResponseBody $ response
              | otherwise   = throwErr (getResponseStatus response) "failed to get"
