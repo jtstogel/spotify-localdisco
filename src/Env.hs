@@ -5,17 +5,17 @@ module Env
 where
 
 import Data.Either ()
-import Data.Text (Text)
-import Errors (eitherIO, eitherFromMaybe)
 import qualified Data.List as List
 import qualified Data.Map as Map
+import Data.Text (Text)
 import qualified Data.Text as T
+import Errors (eitherFromMaybe, eitherIO)
 
 data Env = Env
-  { spotifyClientID :: Text
-  , spotifyClientSecret :: Text
-  , ticketmasterConsumerKey :: Text
-  , ticketmasterConsumerSecret :: Text
+  { spotifyClientID :: Text,
+    spotifyClientSecret :: Text,
+    ticketmasterConsumerKey :: Text,
+    ticketmasterConsumerSecret :: Text
   }
   deriving (Show)
 
@@ -27,10 +27,10 @@ buildEnv get = do
   tConsumerSecret <- get "TICKETMASTER_CONSUMER_SECRET"
   return $
     Env
-      { spotifyClientID = sClientID
-      , spotifyClientSecret = sClientSecret
-      , ticketmasterConsumerKey = tConsumerKey
-      , ticketmasterConsumerSecret = tConsumerSecret
+      { spotifyClientID = sClientID,
+        spotifyClientSecret = sClientSecret,
+        ticketmasterConsumerKey = tConsumerKey,
+        ticketmasterConsumerSecret = tConsumerSecret
       }
 
 second :: (b -> b') -> (a, b) -> (a, b')

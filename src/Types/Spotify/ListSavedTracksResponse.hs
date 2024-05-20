@@ -6,11 +6,10 @@ module Types.Spotify.ListSavedTracksResponse
   ) where
 
 import Data.Aeson
-import Data.Text (Text)
 import GHC.Generics
 import qualified Types.Spotify.Track as Track
 
-data SavedTrackObject = SavedTrackObject
+newtype SavedTrackObject = SavedTrackObject
   { track :: Track.Track
   }
   deriving (Generic, Show)

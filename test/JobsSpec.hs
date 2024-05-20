@@ -3,9 +3,6 @@
 
 module JobsSpec (spec) where
 
-import Data.Ratio
-import Data.List (isPrefixOf)
-import GeoHash
 import Test.Hspec
 import qualified Jobs
 import qualified Types.Job as Job
@@ -30,9 +27,10 @@ testJob = do
 
 runTestJob :: IO Job.Job
 runTestJob = do
-  _ <- Jobs.runJob "jobs/testJob" testJob
-  _ <- threadDelay 1000000
-  Jobs.getJob "jobs/testJob"
+  db <- Jobs.newDB
+  Jobs.runJob db "jobs/testJob" testJob
+  threadDelay 100000
+  Jobs.getJob db "jobs/testJob"
 
 
 spec :: Spec

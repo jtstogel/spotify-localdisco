@@ -6,10 +6,19 @@ import { useAppSelector } from "../app/hooks"
 import { useCreatePlaylistJobMutation, useGetPlaylistJobQuery } from "../features/api/apiSlice"
 
 const CreatePlaylistStatus = ({ name }: { name: string }) => {
+  const [poll, setPoll] = useState(true);
   const { data, error } = useGetPlaylistJobQuery({ name }, {
-    pollingInterval: 500,
+    pollingInterval: poll ? 500 : 0,
     skipPollingIfUnfocused: true,
   });
+
+  if (!data?.done) {
+    return <div className="loading">{data?.metadata?.message}</div>
+  }
+
+  if (poll) {
+    setPoll(false);
+  }
 
   if (error || data?.error) {
     return <div>
@@ -18,20 +27,16 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
     </div>
   }
 
-  if (data?.done) {
-    return <div>{JSON.stringify(data.result)}</div>
-  }
-
-  return <div className="loading">{data?.metadata?.message}</div>
+  return <div>{JSON.stringify(data.result)}</div>
 }
 
 const Home = () => {
   const authTokens = useAppSelector(selectAuthTokens);
   const [createPlaylistJob, { data: response }] = useCreatePlaylistJobMutation()
   const navigate = useNavigate();
-  const [postalCode, setPostalCode] = useState('90402');
+  const [postalCode, setPostalCode] = useState('94110');
   const [radiusMiles, setRadiusMiles] = useState('10');
-  const [days, setDays] = useState('30');
+  const [days, setDays] = useState('120');
 
   useEffect(() => {
     if (!authTokens?.accessToken) {
@@ -69,7 +74,7 @@ const Home = () => {
         </label>
         <br />
         <label>
-          Days:
+          Days out:
           <input value={days} onChange={e => setDays(e.target.value)} type="number"></input>
         </label>
         <br />

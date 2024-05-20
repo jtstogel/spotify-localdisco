@@ -1,10 +1,16 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-module Types.GetSpotifyClientIdResponse where
+{-# HLINT ignore "Use newtype instead of data" #-}
 
-import Data.Aeson
+module Types.GetSpotifyClientIdResponse
+  ( GetSpotifyClientIdResponse(..),
+  )
+where
+
+import Data.Aeson (ToJSON)
 import Data.Text (Text)
-import GHC.Generics
+import GHC.Generics (Generic)
 
 data GetSpotifyClientIdResponse = GetSpotifyClientIdResponse
   { clientId :: !Text

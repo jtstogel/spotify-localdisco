@@ -1,20 +1,21 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Types.Spotify.Artist
-  ( Artist(..)
+  ( Artist (..),
   )
-  where
+where
 
-import Data.Aeson
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
-import GHC.Generics
+import GHC.Generics (Generic)
 
 data Artist = Artist
-  { name :: Text
-  , href :: Text
-  , id :: Text
+  { name :: Text,
+    href :: Text,
+    id :: Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Artist
+
 instance ToJSON Artist

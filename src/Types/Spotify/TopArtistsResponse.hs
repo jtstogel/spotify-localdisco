@@ -1,12 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Types.Spotify.TopArtistsResponse
-  ( TopArtistsResponse(..)
-  ) where
+  ( TopArtistsResponse (..),
+  )
+where
 
-import Data.Aeson
-import Data.Text (Text)
-import GHC.Generics
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 import qualified Types.Spotify.Artist as Artist
 
 data TopArtistsResponse = TopArtistsResponse
@@ -16,4 +16,5 @@ data TopArtistsResponse = TopArtistsResponse
   deriving (Generic, Show)
 
 instance FromJSON TopArtistsResponse
+
 instance ToJSON TopArtistsResponse

@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-
 module Types.Ticketmaster.SearchEventsRequest
   ( SearchEventsRequest(..)
   )

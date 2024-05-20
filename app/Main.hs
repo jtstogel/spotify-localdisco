@@ -2,55 +2,50 @@
 
 module Main (main) where
 
+import qualified App
 import Control.Monad.IO.Class (liftIO)
-import Data.Aeson
+import qualified CreatePlaylist
+import Data.Aeson (KeyValue ((.=)), eitherDecode, object)
+import qualified Data.ByteString.Lazy as B
 import Data.List (find)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import Data.Text.Encoding (decodeUtf8)
-import Data.Time.Clock (getCurrentTime, addUTCTime, nominalDay)
-import Debug.Trace
-import Env (Env (spotifyClientID))
-import Errors (eitherStatusIO, eitherIO, maybeIO, ErrStatus(..))
-import Network.HTTP.Types.Status (Status(statusMessage), status404)
-import Network.Wai                       (Middleware)
-import Network.Wai.Middleware.Cors       (CorsResourcePolicy(..), cors, simpleCorsResourcePolicy)
-import qualified App
-import qualified CreatePlaylist
-import qualified Data.ByteString.Lazy as B
-import qualified Data.Map as M
 import qualified Data.Text as T
+import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text.Lazy as LazyText
+import Data.Time.Clock (addUTCTime, getCurrentTime, nominalDay)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUIDV4
+import Env (Env (spotifyClientID))
 import qualified Env
+import Errors (ErrStatus (..), eitherIO, eitherStatusIO, maybeIO)
 import qualified Jobs
 import qualified Locations
-import qualified Spotify
-import qualified Ticketmaster
+import Network.HTTP.Types.Status (Status (statusMessage), status404)
+import Network.Wai (Middleware)
+import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
+import Text.Read (readMaybe)
 import qualified Types.CreatePlaylistJobRequest as CreatePlaylistJobRequest
 import qualified Types.GetSpotifyClientIdResponse as GetSpotifyClientIdResponse
-import qualified Types.Spotify.ListTopItemsRequest as ListTopItemsRequest
-import qualified Types.Spotify.Track as Track
-import qualified Types.SpotifyDiscovery as SpotifyDiscovery
 import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
-import qualified Web.Scotty as S
-import Text.Read (readMaybe)
 import Web.Scotty (ActionM)
+import qualified Web.Scotty as S
 
 main :: IO ()
 main = do
   env <- Env.load ".env"
   postalCodeLookup <- loadPostalCodeLookup "postal-codes.json"
+  jobsDB <- Jobs.newDB
 
   let appState =
         App.AppState
-          { App.spotifyClientID = Env.spotifyClientID env
-          , App.spotifyClientSecret = Env.spotifyClientSecret env
-          , App.ticketmasterConsumerKey = Env.ticketmasterConsumerKey env
-          , App.ticketmasterConsumerSecret = Env.ticketmasterConsumerSecret env
-          , App.postalCodeLookup = postalCodeLookup
+          { App.spotifyClientID = Env.spotifyClientID env,
+            App.spotifyClientSecret = Env.spotifyClientSecret env,
+            App.ticketmasterConsumerKey = Env.ticketmasterConsumerKey env,
+            App.ticketmasterConsumerSecret = Env.ticketmasterConsumerSecret env,
+            App.postalCodeLookup = postalCodeLookup,
+            App.jobsDB = jobsDB
           }
 
   routes appState
@@ -63,8 +58,8 @@ loadPostalCodeLookup filename = do
 
 handleException :: ErrStatus -> ActionM ()
 handleException (ErrStatus s msg) = do
-    S.status s
-    S.text . LazyText.fromStrict $ (T.pack msg) <> ": " <> (decodeUtf8 $ statusMessage s) 
+  S.status s
+  S.text . LazyText.fromStrict $ T.pack msg <> ": " <> decodeUtf8 (statusMessage s)
 
 getSpotifyClientId :: App.AppState -> ActionM ()
 getSpotifyClientId appState = do
@@ -76,7 +71,7 @@ getSpotifyClientId appState = do
 queryParamMaybe :: LazyText.Text -> ActionM (Maybe LazyText.Text)
 queryParamMaybe name = do
   params <- S.queryParams
-  return . fmap snd . find ((==name) . fst) $ params
+  return . fmap snd . find ((== name) . fst) $ params
 
 getEvents :: App.AppState -> ActionM ()
 getEvents appState = do
@@ -85,23 +80,26 @@ getEvents appState = do
   radiusMiles <- S.queryParam "radiusMiles" :: ActionM Int
   days <- S.queryParam "days" :: ActionM Int
   startTime <- liftIO getCurrentTime
-  let endTime = addUTCTime ((fromIntegral days) * nominalDay) startTime
+  let endTime = addUTCTime (fromIntegral days * nominalDay) startTime
 
   pageToken <- queryParamMaybe "pageToken"
   let pageNumberMaybe = readMaybe . LazyText.unpack . fromMaybe "0" $ pageToken :: Maybe Int
   pageNumber <- liftIO . maybeIO "failed to parse pageToken" $ pageNumberMaybe
 
-  events <- liftIO $ CreatePlaylist.searchEvents (App.ticketmasterConsumerKey appState)
-    SearchEventsRequest.SearchEventsRequest
-      { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash
-      , SearchEventsRequest.radiusMiles = radiusMiles
-      , SearchEventsRequest.classificationName = ["music"]
-      , SearchEventsRequest.startTime = startTime
-      , SearchEventsRequest.endTime = endTime
-      , SearchEventsRequest.pageSize = 200
-      , SearchEventsRequest.pageNumber = pageNumber
-      }
-    50000
+  events <-
+    liftIO $
+      CreatePlaylist.searchEvents
+        (App.ticketmasterConsumerKey appState)
+        SearchEventsRequest.SearchEventsRequest
+          { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash,
+            SearchEventsRequest.radiusMiles = radiusMiles,
+            SearchEventsRequest.classificationName = ["music"],
+            SearchEventsRequest.startTime = startTime,
+            SearchEventsRequest.endTime = endTime,
+            SearchEventsRequest.pageSize = 200,
+            SearchEventsRequest.pageNumber = pageNumber
+          }
+        50000
 
   S.json $ ListArtistsResponse.fromEvents events
 
@@ -118,18 +116,18 @@ getPlaceName appState = do
   S.text $ LazyText.fromStrict placeName
 
 getTopArtists :: App.AppState -> ActionM ()
-getTopArtists appState = do
-  auth <- S.queryParam "spotifyAccessToken" :: ActionM  Text
+getTopArtists _ = do
+  auth <- S.queryParam "spotifyAccessToken" :: ActionM Text
   limit <- S.queryParam "limit" :: ActionM Int
   artists <- liftIO $ CreatePlaylist.getTopArtists auth limit
-  S.json $ artists
+  S.json artists
 
 getTopTracks :: App.AppState -> ActionM ()
-getTopTracks appState = do
-  auth <- S.queryParam "spotifyAccessToken" :: ActionM  Text
+getTopTracks _ = do
+  auth <- S.queryParam "spotifyAccessToken" :: ActionM Text
   limit <- S.queryParam "limit" :: ActionM Int
   tracks <- liftIO $ CreatePlaylist.getTopTracks auth limit
-  S.json $ tracks
+  S.json tracks
 
 createDiscoveryJob :: App.AppState -> ActionM ()
 createDiscoveryJob appState = do
@@ -141,30 +139,32 @@ createDiscoveryJob appState = do
 
   geoHash <- liftIO $ eitherStatusIO status404 $ Locations.lookupGeoHash (App.postalCodeLookup appState) postalCode
   startTime <- liftIO getCurrentTime
-  let endTime = addUTCTime ((fromIntegral days) * nominalDay) startTime
+  let endTime = addUTCTime (fromIntegral days * nominalDay) startTime
 
   uuid <- liftIO . fmap UUID.toText $ UUIDV4.nextRandom
   let jobName = "discoveryJobs/" <> uuid
 
-  let eventsReq = SearchEventsRequest.SearchEventsRequest { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash
-                                                          , SearchEventsRequest.radiusMiles = radiusMiles
-                                                          , SearchEventsRequest.classificationName = ["music"]
-                                                          , SearchEventsRequest.startTime = startTime
-                                                          , SearchEventsRequest.endTime = endTime
-                                                          , SearchEventsRequest.pageSize = 200
-                                                          , SearchEventsRequest.pageNumber = 0
-                                                          }
+  let eventsReq =
+        SearchEventsRequest.SearchEventsRequest
+          { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash,
+            SearchEventsRequest.radiusMiles = radiusMiles,
+            SearchEventsRequest.classificationName = ["music"],
+            SearchEventsRequest.startTime = startTime,
+            SearchEventsRequest.endTime = endTime,
+            SearchEventsRequest.pageSize = 200,
+            SearchEventsRequest.pageNumber = 0
+          }
 
   let discoveryCoroutine = CreatePlaylist.discoverSpotify appState auth eventsReq
-  _ <- liftIO $ Jobs.runJob jobName discoveryCoroutine
+  _ <- liftIO $ Jobs.runJob (App.jobsDB appState) jobName discoveryCoroutine
 
   S.json $ object ["name" .= jobName]
 
 getDiscoveryJob :: App.AppState -> ActionM ()
 getDiscoveryJob appState = do
-  id <- S.captureParam "id" :: ActionM  Text
-  let jobName = "discoveryJobs/" <> id
-  job <- liftIO $ Jobs.getJob jobName
+  jobId <- S.captureParam "id" :: ActionM Text
+  let jobName = "discoveryJobs/" <> jobId
+  job <- liftIO $ Jobs.getJob (App.jobsDB appState) jobName
   S.json job
 
 allowCors :: Middleware
@@ -172,10 +172,10 @@ allowCors = cors (const $ Just appCorsResourcePolicy)
 
 appCorsResourcePolicy :: CorsResourcePolicy
 appCorsResourcePolicy =
-    simpleCorsResourcePolicy
-        { corsMethods = ["OPTIONS", "GET", "PUT", "POST"]
-        , corsRequestHeaders = ["content-type"]
-        }
+  simpleCorsResourcePolicy
+    { corsMethods = ["OPTIONS", "GET", "PUT", "POST"],
+      corsRequestHeaders = ["content-type"]
+    }
 
 routes :: App.AppState -> IO ()
 routes appState = S.scotty 8080 $ do
@@ -189,4 +189,4 @@ routes appState = S.scotty 8080 $ do
   S.get "/placeName" $ getPlaceName appState
   S.get "/localArtists" $ getEvents appState
   S.post "/discoveryJobs" $ createDiscoveryJob appState
-  S.get  "/discoveryJobs/:id" $ getDiscoveryJob appState
+  S.get "/discoveryJobs/:id" $ getDiscoveryJob appState

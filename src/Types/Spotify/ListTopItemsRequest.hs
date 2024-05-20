@@ -8,7 +8,6 @@ module Types.Spotify.ListTopItemsRequest
 import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
-import qualified Types.Spotify.Artist as Artist
 
 data ListTopItemsRequest = ListTopItemsRequest
   { timeRange :: !(Maybe Text)

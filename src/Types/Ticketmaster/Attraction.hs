@@ -2,17 +2,17 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 module Types.Ticketmaster.Attraction
-  ( Attraction(..)
+  ( Attraction (..),
   )
-  where
+where
 
-import Data.Aeson
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
-import GHC.Generics
+import GHC.Generics (Generic)
 
 data Attraction = Attraction
-  { name :: Text
-  , id :: Text
+  { name :: Text,
+    id :: Text
   }
   deriving (Generic, Show)
 

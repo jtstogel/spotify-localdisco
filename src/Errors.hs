@@ -1,13 +1,21 @@
-module Errors where
+module Errors
+  ( throwErr,
+    eitherFromMaybe,
+    mapLeft,
+    eitherStatusIO,
+    eitherIO,
+    maybeIO,
+    ErrStatus (..),
+  )
+where
 
 import Control.Exception (Exception, throwIO)
-import Data.Either (Either(Left, Right))
 import Data.Maybe (fromMaybe)
 import Data.Typeable (Typeable)
 import Network.HTTP.Types.Status (Status, status500)
 
 data ErrStatus = ErrStatus Status String
-   deriving (Show, Typeable)
+  deriving (Show, Typeable)
 
 instance Exception ErrStatus
 
@@ -22,7 +30,7 @@ mapLeft f (Left v) = Left $ f v
 mapLeft _ (Right v) = Right v
 
 eitherStatusIO :: Status -> Either String b -> IO b
-eitherStatusIO code = either throwIO return . (mapLeft (ErrStatus code))
+eitherStatusIO code = either throwIO return . mapLeft (ErrStatus code)
 
 eitherIO :: Either String b -> IO b
 eitherIO = eitherStatusIO status500

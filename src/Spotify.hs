@@ -3,31 +3,37 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Spotify
-  ( AuthorizationToken(..)
-  , ClientCredentials
-  , getClientCredentials
-  , getRecommendations
-  , listTopTracks
-  , listTopArtists
-  , listFollowedArtists
-  , listSavedTracks
+  ( AuthorizationToken (..),
+    ClientCredentials,
+    getClientCredentials,
+    getRecommendations,
+    listTopTracks,
+    listTopArtists,
+    listFollowedArtists,
+    listSavedTracks,
   )
 where
 
-import Control.Monad (when)
 import Control.Concurrent (threadDelay)
-import Data.Aeson
+import Data.Aeson (FromJSON)
 import Data.Maybe (isJust)
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
-import Debug.Trace
-import Errors (throwErr, eitherStatusIO, mapLeft)
-import GHC.Generics
-import HTTP (queryParam, get)
+import Debug.Trace (traceShowId)
+import GHC.Generics (Generic)
+import HTTP (get, queryParam)
 import Network.HTTP.Conduit (urlEncodedBody)
 import Network.HTTP.Simple
-import Network.HTTP.Types.Status (status500)
-import qualified Data.Text as T
+  ( Query,
+    Response,
+    getResponseBody,
+    httpJSON,
+    parseRequest_,
+    setRequestBasicAuth,
+    setRequestBearerAuth,
+    setRequestQueryString,
+  )
 import qualified Types.Spotify.GetRecommendationsRequest as GetRecommendationsRequest
 import qualified Types.Spotify.GetRecommendationsResponse as GetRecommendationsResponse
 import qualified Types.Spotify.ListFollowedArtistsRequest as ListFollowedArtistsRequest
@@ -74,40 +80,51 @@ removeNothings = filter (isJust . snd)
 
 topItemsQuery :: ListTopItemsRequest.ListTopItemsRequest -> Query
 topItemsQuery req =
-  [ ("limit",      queryParam $ ListTopItemsRequest.limit req)
-  , ("offset",     queryParam $ ListTopItemsRequest.offset req)
-  , ("time_range", queryParam $ ListTopItemsRequest.timeRange req)
+  [ ("limit", queryParam $ ListTopItemsRequest.limit req),
+    ("offset", queryParam $ ListTopItemsRequest.offset req),
+    ("time_range", queryParam $ ListTopItemsRequest.timeRange req)
   ]
 
 listTopArtists :: Text -> ListTopItemsRequest.ListTopItemsRequest -> IO TopArtistsResponse.TopArtistsResponse
-listTopArtists auth req = spotifyGet auth "/me/top/artists" $ removeNothings (topItemsQuery req)
+listTopArtists auth req = spotifyGet auth "/me/top/artists" (topItemsQuery req)
 
 listTopTracks :: Text -> ListTopItemsRequest.ListTopItemsRequest -> IO TopTracksResponse.TopTracksResponse
-listTopTracks auth req = spotifyGet auth "/me/top/tracks" $ removeNothings (topItemsQuery req)
+listTopTracks auth req = spotifyGet auth "/me/top/tracks" (topItemsQuery req)
 
 listFollowedArtists :: Text -> ListFollowedArtistsRequest.ListFollowedArtistsRequest -> IO ListFollowedArtistsResponse.ListFollowedArtistsResponse
-listFollowedArtists auth req = spotifyGet auth "/me/following" $ removeNothings
-  [ ("type",  Just "artist")
-  , ("limit", queryParam . ListFollowedArtistsRequest.limit $ req)
-  , ("after", queryParam . ListFollowedArtistsRequest.after $ req)
-  ]
+listFollowedArtists auth req =
+  spotifyGet auth "/me/following" $
+    removeNothings
+      [ ("type", Just "artist"),
+        ("limit", queryParam . ListFollowedArtistsRequest.limit $ req),
+        ("after", queryParam . ListFollowedArtistsRequest.after $ req)
+      ]
 
 listSavedTracks :: Text -> ListSavedTracksRequest.ListSavedTracksRequest -> IO ListSavedTracksResponse.ListSavedTracksResponse
-listSavedTracks auth req = spotifyGet auth "/me/tracks" $ removeNothings
-  [ ("limit",  queryParam . ListSavedTracksRequest.limit $ req)
-  , ("offset", queryParam . ListSavedTracksRequest.offset $ req)
-  ]
+listSavedTracks auth req =
+  spotifyGet
+    auth
+    "/me/tracks"
+    [ ("limit", queryParam . ListSavedTracksRequest.limit $ req),
+      ("offset", queryParam . ListSavedTracksRequest.offset $ req)
+    ]
 
 getRecommendations :: Text -> GetRecommendationsRequest.GetRecommendationsRequest -> IO GetRecommendationsResponse.GetRecommendationsResponse
-getRecommendations auth req = spotifyGet auth "/recommendations" $ removeNothings
-  [ ("limit",        queryParam . GetRecommendationsRequest.limit $ (traceShowId req))
-  , ("seed_artists", queryParam . T.intercalate "," . GetRecommendationsRequest.seedArtists $ req)
-  , ("seed_tracks",  queryParam . T.intercalate "," . GetRecommendationsRequest.seedTracks $ req)
-  ]
+getRecommendations auth req = do
+  -- Spotify does not like lots of requests to `/recommendations`.
+  threadDelay 1000000
+  spotifyGet
+    auth
+    "/recommendations"
+    [ ("limit", queryParam . GetRecommendationsRequest.limit $ traceShowId req),
+      ("seed_artists", queryParam . T.intercalate "," . GetRecommendationsRequest.seedArtists $ req),
+      ("seed_tracks", queryParam . T.intercalate "," . GetRecommendationsRequest.seedTracks $ req)
+    ]
 
 spotifyGet :: (FromJSON r, Show r) => Text -> String -> Query -> IO r
-spotifyGet token path query = get
-  . setRequestQueryString query
-  . setRequestBearerAuth (encodeUtf8 token)
-  . parseRequest_
-  $ baseURL ++ path
+spotifyGet token path query =
+  get
+    . setRequestQueryString (removeNothings query)
+    . setRequestBearerAuth (encodeUtf8 token)
+    . parseRequest_
+    $ baseURL ++ path

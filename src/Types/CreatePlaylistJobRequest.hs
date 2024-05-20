@@ -1,18 +1,22 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Types.CreatePlaylistJobRequest where
+module Types.CreatePlaylistJobRequest
+  ( CreatePlaylistJobRequest(..),
+  )
+where
 
-import Data.Aeson
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
-import GHC.Generics
+import GHC.Generics (Generic)
 
 data CreatePlaylistJobRequest = CreatePlaylistJobRequest
-  { spotifyAccessToken :: !Text
-  , postalCode :: !Text
-  , radiusMiles :: !Int
-  , days :: !Int
+  { spotifyAccessToken :: !Text,
+    postalCode :: !Text,
+    radiusMiles :: !Int,
+    days :: !Int
   }
   deriving (Generic)
 
 instance ToJSON CreatePlaylistJobRequest
+
 instance FromJSON CreatePlaylistJobRequest

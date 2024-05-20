@@ -11,7 +11,7 @@ import Data.Text (Text)
 import GHC.Generics
 import qualified Types.Spotify.Artist as Artist
 
-data Cursor = Cursor
+newtype Cursor = Cursor
   { after :: Maybe Text
   }
   deriving (Generic, Show)
@@ -22,7 +22,7 @@ data ArtistsObject = ArtistsObject
   }
   deriving (Generic, Show)
 
-data ListFollowedArtistsResponse = ListFollowedArtistsResponse
+newtype ListFollowedArtistsResponse = ListFollowedArtistsResponse
   { artists :: Maybe ArtistsObject
   }
   deriving (Generic, Show)

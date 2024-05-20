@@ -1,22 +1,23 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module App
-  ( AppState(..),
+  ( AppState (..),
     App,
   )
 where
 
 import Control.Monad.Reader (ReaderT)
 import Data.Text (Text)
+import qualified Jobs
 import qualified Locations
 
 data AppState = AppState
-  { spotifyClientID :: Text
-  , spotifyClientSecret :: Text
-  , ticketmasterConsumerKey :: Text
-  , ticketmasterConsumerSecret :: Text
-  , postalCodeLookup :: Locations.PostalCodeLookup
+  { spotifyClientID :: !Text,
+    spotifyClientSecret :: !Text,
+    ticketmasterConsumerKey :: !Text,
+    ticketmasterConsumerSecret :: !Text,
+    postalCodeLookup :: !Locations.PostalCodeLookup,
+    jobsDB :: !Jobs.DB
   }
-  deriving (Show)
 
 type App = ReaderT AppState IO
