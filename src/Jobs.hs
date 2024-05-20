@@ -1,10 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 {-# HLINT ignore "Use newtype instead of data" #-}
 
 module Jobs
   ( runJob,
+    runJobFinally,
     getJob,
     yieldStatus,
     JobStatus (..),
@@ -14,7 +16,7 @@ module Jobs
   )
 where
 
-import Control.Concurrent (forkIO)
+import Control.Concurrent (ThreadId, forkFinally)
 import Control.Concurrent.STM.TVar (TVar, modifyTVar, newTVarIO, readTVar)
 import qualified Control.Exception as Exception
 import Control.Monad.Coroutine (Coroutine, pogoStickM)
@@ -64,8 +66,8 @@ setJobDetails :: DB -> Text -> JobDetails -> IO ()
 setJobDetails (DB jobsVar) name details = atomically . modifyTVar jobsVar $ M.insert name details
 
 -- Runs a job in another thread and updates the shared job status at every yield.
-runJob :: (ToJSON r) => DB -> Text -> Job r -> IO ()
-runJob db name coroutine = do
+runJobFinally :: (ToJSON r) => DB -> Text -> IO () -> Job r -> IO ()
+runJobFinally db name finally coroutine = do
   let recordError error = setJobDetails db name $ defaultDetails {err = Just error}
   let recordResult result = setJobDetails db name $ defaultDetails {result = Just result}
   let recordStatus status = setJobDetails db name $ defaultDetails {status = Just status}
@@ -73,15 +75,21 @@ runJob db name coroutine = do
 
   _ <- recordStatus $ JobStatus {message = "Queued job..."}
 
-  _ <- forkIO $ do
-    resultEither <- Exception.try $ pogoStickM recordYieldedStatus coroutine
-    case resultEither of
-      Left e -> case e of
-        ErrStatus _ _ -> recordError e
-        _ -> recordError $ ErrStatus status500 (show e)
-      Right r -> recordResult (toJSON r)
-
+  _ <- forkFinally
+    ( do
+        resultEither <- Exception.try $ pogoStickM recordYieldedStatus coroutine
+        case resultEither of
+          Left e -> case e of
+            ErrStatus _ _ -> recordError e
+            _ -> recordError $ ErrStatus status500 (show e)
+          Right r -> recordResult (toJSON r)
+    )
+    (const finally)
+  
   return ()
+
+runJob :: (ToJSON r) => DB -> Text -> Job r -> IO ()
+runJob db name = runJobFinally db name (return ())
 
 mkPublicErr :: ErrStatus -> Job.JobError
 mkPublicErr (ErrStatus s msg) =

@@ -3,13 +3,13 @@
 
 module JobsSpec (spec) where
 
+import Control.Concurrent.MVar (MVar, newEmptyMVar, takeMVar, putMVar)
 import Test.Hspec
 import qualified Jobs
 import qualified Types.Job as Job
 import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
-import Control.Concurrent (threadDelay)
 
 data TestResult = TestResult
   { result :: !Text
@@ -27,9 +27,14 @@ testJob = do
 
 runTestJob :: IO Job.Job
 runTestJob = do
+  v <- newEmptyMVar :: IO (MVar ())
+
   db <- Jobs.newDB
-  Jobs.runJob db "jobs/testJob" testJob
-  threadDelay 100000
+
+
+  _ <- Jobs.runJobFinally db "jobs/testJob" (putMVar v ()) testJob
+
+  takeMVar v
   Jobs.getJob db "jobs/testJob"
 
 
