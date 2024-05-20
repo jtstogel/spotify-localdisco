@@ -2,6 +2,7 @@
 
 module Types.SpotifyDiscovery
   ( SpotifyDiscovery(..)
+  , SpotifyDiscoveryStatus(..)
   )
   where
 
@@ -17,5 +18,13 @@ data SpotifyDiscovery = SpotifyDiscovery
   }
   deriving (Generic, Show)
 
+data SpotifyDiscoveryStatus = SpotifyDiscoveryStatus
+  { message :: Maybe Text
+  , discovery :: Maybe SpotifyDiscovery
+  }
+  deriving (Generic, Show)
+
 instance FromJSON SpotifyDiscovery
 instance ToJSON SpotifyDiscovery
+instance FromJSON SpotifyDiscoveryStatus
+instance ToJSON SpotifyDiscoveryStatus

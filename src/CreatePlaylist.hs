@@ -6,13 +6,19 @@ module CreatePlaylist
   , getTopTracks
   , searchEvents
   , recommendationsForTrack
+  , Job(..)
+  , Progress(..)
   )
   where
 
 import Control.Monad (when)
+import Control.Monad.Coroutine
+import Control.Monad.Trans.Class
+import Control.Monad.Coroutine.SuspensionFunctors (Yield)
 import Data.List (reverse, sort, nub)
 import Data.Maybe (fromMaybe)
 import Debug.Trace (traceShowId)
+import Data.Ratio
 import qualified App as App
 import qualified Data.Text as T
 import qualified Spotify as Spotify
@@ -32,6 +38,7 @@ import qualified Types.SpotifyDiscovery as SpotifyDiscovery
 import qualified Types.Ticketmaster.Attraction as Attraction
 import qualified Types.Ticketmaster.Event as Event
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
+import qualified Jobs
 import qualified Types.Ticketmaster.SearchEventsResponse as SearchEventsResponse
 
 data Playlist = Playlist
@@ -142,20 +149,37 @@ searchEvents auth = listN (Ticketmaster.searchEvents auth) makeNextRequest getIt
 attractionNamesFromEvent :: Event.Event -> [T.Text]
 attractionNamesFromEvent = map Attraction.name . fromMaybe [] . Event.attractions . Event._embedded
 
-discoverSpotify :: App.AppState -> T.Text -> SearchEventsRequest.SearchEventsRequest -> IO SpotifyDiscovery.SpotifyDiscovery
+data Progress = Progress
+  { message :: T.Text
+  }
+
+type Job a = Coroutine (Yield Progress) IO a
+
+discoverSpotify :: App.AppState -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
 discoverSpotify appState spotifyAuth eventsRequest = do
+    Jobs.yieldStatus "Finding local events"
     -- You're only allowed to get 1000 events from the Ticketmaster API...
-    events <- searchEvents (App.ticketmasterConsumerKey appState) eventsRequest 1000
+    events <- lift $ searchEvents (App.ticketmasterConsumerKey appState) eventsRequest 1000
 
-    topArtists <- getTopArtists spotifyAuth 100
-    topTracks <- getTopTracks spotifyAuth 100
-    followedArtists <- getFollowedArtists spotifyAuth 100
-    savedTracks <- getSavedTracks spotifyAuth 100
+    Jobs.yieldStatus "Getting your top artists"
+    topArtists <- lift $ getTopArtists spotifyAuth 100
 
-    -- For the top 20 tracks and artists, spider to get more tracks based on Spotify's recommendations.
-    tracksFromTopTracks <- mapM (recommendationsForTrack spotifyAuth 20) (take 20 topTracks)
-    tracksFromTopArtists <- mapM (recommendationsForArtist spotifyAuth 20) (take 20 topArtists)
+    Jobs.yieldStatus "Getting your top tracks"
+    topTracks <- lift $ getTopTracks spotifyAuth 100
 
+    Jobs.yieldStatus "Getting your followed artists"
+    followedArtists <- lift $ getFollowedArtists spotifyAuth 100
+
+    Jobs.yieldStatus "Getting your saved tracks"
+    savedTracks <- lift $ getSavedTracks spotifyAuth 100
+
+    Jobs.yieldStatus "Finding some new music based on your top tracks"
+    tracksFromTopTracks <- lift $ mapM (recommendationsForTrack spotifyAuth 20) (take 20 topTracks)
+
+    Jobs.yieldStatus "Finding some new music based on your top artists"
+    tracksFromTopArtists <- lift $ mapM (recommendationsForArtist spotifyAuth 20) (take 20 topArtists)
+
+    Jobs.yieldStatus "Putting it all together"
     let tracks = topTracks ++ savedTracks ++ (concat tracksFromTopTracks) ++ (concat tracksFromTopArtists)
     let artists = topArtists ++ followedArtists ++ concatMap (fromMaybe [] . Track.artists) tracks
 

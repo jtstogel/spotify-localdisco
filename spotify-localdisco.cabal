@@ -31,10 +31,13 @@ library
       Errors
       GeoHash
       HTTP
+      Jobs
       Locations
       Spotify
       Ticketmaster
+      Types.CreatePlaylistJobRequest
       Types.GetSpotifyClientIdResponse
+      Types.Job
       Types.Spotify.Artist
       Types.Spotify.GetRecommendationsRequest
       Types.Spotify.GetRecommendationsResponse
@@ -68,11 +71,15 @@ library
     , containers
     , http-conduit
     , http-types
+    , monad-coroutine
     , mtl
     , scotty
     , sort
+    , stm
     , text
     , time
+    , transformers
+    , uuid
     , wai
     , wai-cors
     , wai-extra
@@ -96,12 +103,16 @@ executable web-exe
     , containers
     , http-conduit
     , http-types
+    , monad-coroutine
     , mtl
     , scotty
     , sort
     , spotify-localdisco
+    , stm
     , text
     , time
+    , transformers
+    , uuid
     , wai
     , wai-cors
     , wai-extra
@@ -112,6 +123,7 @@ test-suite spec
   main-is: Spec.hs
   other-modules:
       GeoHashSpec
+      JobsSpec
       LocationsSpec
       Paths_spotify_localdisco
   autogen-modules:
@@ -129,12 +141,16 @@ test-suite spec
     , hspec ==2.*
     , http-conduit
     , http-types
+    , monad-coroutine
     , mtl
     , scotty
     , sort
     , spotify-localdisco
+    , stm
     , text
     , time
+    , transformers
+    , uuid
     , wai
     , wai-cors
     , wai-extra

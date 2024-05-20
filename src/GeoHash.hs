@@ -1,6 +1,5 @@
 module GeoHash
-    (
-        geoHash
+    ( geoHash
     )
     where
 

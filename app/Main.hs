@@ -5,11 +5,11 @@ module Main (main) where
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.List (find)
-import Debug.Trace
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
 import Data.Time.Clock (getCurrentTime, addUTCTime, nominalDay)
+import Debug.Trace
 import Env (Env (spotifyClientID))
 import Errors (eitherStatusIO, eitherIO, maybeIO, ErrStatus(..))
 import Network.HTTP.Types.Status (Status(statusMessage), status404)
@@ -18,15 +18,21 @@ import Network.Wai.Middleware.Cors       (CorsResourcePolicy(..), cors, simpleCo
 import qualified App
 import qualified CreatePlaylist
 import qualified Data.ByteString.Lazy as B
+import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LazyText
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUIDV4
 import qualified Env
+import qualified Jobs
 import qualified Locations
 import qualified Spotify
 import qualified Ticketmaster
+import qualified Types.CreatePlaylistJobRequest as CreatePlaylistJobRequest
 import qualified Types.GetSpotifyClientIdResponse as GetSpotifyClientIdResponse
 import qualified Types.Spotify.ListTopItemsRequest as ListTopItemsRequest
 import qualified Types.Spotify.Track as Track
+import qualified Types.SpotifyDiscovery as SpotifyDiscovery
 import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import qualified Web.Scotty as S
@@ -125,16 +131,20 @@ getTopTracks appState = do
   tracks <- liftIO $ CreatePlaylist.getTopTracks auth limit
   S.json $ tracks
 
-discoverSpotify :: App.AppState -> ActionM ()
-discoverSpotify appState = do
-  auth <- S.queryParam "spotifyAccessToken" :: ActionM  Text
-  postalCode <- S.queryParam "postalCode" :: ActionM Text
-  radiusMiles <- S.queryParam "radiusMiles" :: ActionM Int
-  days <- S.queryParam "days" :: ActionM Int
+createDiscoveryJob :: App.AppState -> ActionM ()
+createDiscoveryJob appState = do
+  request <- S.jsonData :: ActionM CreatePlaylistJobRequest.CreatePlaylistJobRequest
+  let days = CreatePlaylistJobRequest.days request
+  let postalCode = CreatePlaylistJobRequest.postalCode request
+  let auth = CreatePlaylistJobRequest.spotifyAccessToken request
+  let radiusMiles = CreatePlaylistJobRequest.radiusMiles request
 
   geoHash <- liftIO $ eitherStatusIO status404 $ Locations.lookupGeoHash (App.postalCodeLookup appState) postalCode
   startTime <- liftIO getCurrentTime
   let endTime = addUTCTime ((fromIntegral days) * nominalDay) startTime
+
+  uuid <- liftIO . fmap UUID.toText $ UUIDV4.nextRandom
+  let jobName = "discoveryJobs/" <> uuid
 
   let eventsReq = SearchEventsRequest.SearchEventsRequest { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash
                                                           , SearchEventsRequest.radiusMiles = radiusMiles
@@ -144,8 +154,18 @@ discoverSpotify appState = do
                                                           , SearchEventsRequest.pageSize = 200
                                                           , SearchEventsRequest.pageNumber = 0
                                                           }
-  discovery <- liftIO $ CreatePlaylist.discoverSpotify appState auth eventsReq
-  S.json $ discovery
+
+  let discoveryCoroutine = CreatePlaylist.discoverSpotify appState auth eventsReq
+  _ <- liftIO $ Jobs.runJob jobName discoveryCoroutine
+
+  S.json $ object ["name" .= jobName]
+
+getDiscoveryJob :: App.AppState -> ActionM ()
+getDiscoveryJob appState = do
+  id <- S.captureParam "id" :: ActionM  Text
+  let jobName = "discoveryJobs/" <> id
+  job <- liftIO $ Jobs.getJob jobName
+  S.json job
 
 allowCors :: Middleware
 allowCors = cors (const $ Just appCorsResourcePolicy)
@@ -168,4 +188,5 @@ routes appState = S.scotty 8080 $ do
   S.get "/geohash" $ getGeoHash appState
   S.get "/placeName" $ getPlaceName appState
   S.get "/localArtists" $ getEvents appState
-  S.get "/discover" $ discoverSpotify appState
+  S.post "/discoveryJobs" $ createDiscoveryJob appState
+  S.get  "/discoveryJobs/:id" $ getDiscoveryJob appState
