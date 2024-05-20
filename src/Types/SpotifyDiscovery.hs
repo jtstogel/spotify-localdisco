@@ -13,8 +13,7 @@ import qualified Types.Spotify.Artist as Artist
 import qualified Types.Spotify.Track as Track
 
 data SpotifyDiscovery = SpotifyDiscovery
-  { spotifyArtists :: ![Text]
-  , ticketmasterArtists :: ![Text]
+  { artists :: ![Text]
   }
   deriving (Generic, Show)
 

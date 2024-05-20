@@ -15,7 +15,7 @@ import Data.Time.Clock (UTCTime)
 import Data.Time.Format (formatTime, defaultTimeLocale, FormatTime)
 import Debug.Trace
 import Errors (throwErr, eitherStatusIO, mapLeft)
-import HTTP (queryParam)
+import HTTP (queryParam, get)
 import Network.HTTP.Simple
 import Network.HTTP.Types.Status (status500)
 import qualified Data.ByteString as B
@@ -43,11 +43,7 @@ timeString :: FormatTime t => t -> String
 timeString = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 
 ticketmasterGet :: (FromJSON r, Show r) => String -> Query -> IO r
-ticketmasterGet path query = do
-  let requestWithHeaders = setRequestQueryString query $ parseRequest_ (baseURL ++ path)
-  response <- httpJSONEither (traceShowId requestWithHeaders)
-
-  when ((getResponseStatusCode (traceShowId response)) /= 200) $
-    throwErr (getResponseStatus response) ("failed to get" ++ path)
-
-  eitherStatusIO status500 $ mapLeft show $ getResponseBody response
+ticketmasterGet path query = get
+  . setRequestQueryString query
+  . parseRequest_
+  $ baseURL ++ path

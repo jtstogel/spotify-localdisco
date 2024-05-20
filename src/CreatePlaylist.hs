@@ -174,10 +174,10 @@ discoverSpotify appState spotifyAuth eventsRequest = do
     savedTracks <- lift $ getSavedTracks spotifyAuth 100
 
     Jobs.yieldStatus "Finding some new music based on your top tracks"
-    tracksFromTopTracks <- lift $ mapM (recommendationsForTrack spotifyAuth 20) (take 20 topTracks)
+    tracksFromTopTracks <- lift $ mapM (recommendationsForTrack spotifyAuth 20) (take 10 topTracks)
 
     Jobs.yieldStatus "Finding some new music based on your top artists"
-    tracksFromTopArtists <- lift $ mapM (recommendationsForArtist spotifyAuth 20) (take 20 topArtists)
+    tracksFromTopArtists <- lift $ mapM (recommendationsForArtist spotifyAuth 20) (take 10 topArtists)
 
     Jobs.yieldStatus "Putting it all together"
     let tracks = topTracks ++ savedTracks ++ (concat tracksFromTopTracks) ++ (concat tracksFromTopArtists)
@@ -187,6 +187,5 @@ discoverSpotify appState spotifyAuth eventsRequest = do
     let ticketmasterArtists = nub . sort . concatMap attractionNamesFromEvent $ events
 
     return $ SpotifyDiscovery.SpotifyDiscovery
-        { SpotifyDiscovery.spotifyArtists = spotifyArtists
-        , SpotifyDiscovery.ticketmasterArtists = ticketmasterArtists
+        { SpotifyDiscovery.artists = filter (`elem` ticketmasterArtists) spotifyArtists
         }

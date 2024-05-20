@@ -11,7 +11,7 @@ data ErrStatus = ErrStatus Status String
 
 instance Exception ErrStatus
 
-throwErr :: Status -> String -> IO ()
+throwErr :: Status -> String -> IO a
 throwErr s msg = throwIO $ ErrStatus s msg
 
 eitherFromMaybe :: l -> Maybe r -> Either l r

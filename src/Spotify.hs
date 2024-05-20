@@ -15,6 +15,7 @@ module Spotify
 where
 
 import Control.Monad (when)
+import Control.Concurrent (threadDelay)
 import Data.Aeson
 import Data.Maybe (isJust)
 import Data.Text (Text)
@@ -22,7 +23,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Debug.Trace
 import Errors (throwErr, eitherStatusIO, mapLeft)
 import GHC.Generics
-import HTTP (queryParam)
+import HTTP (queryParam, get)
 import Network.HTTP.Conduit (urlEncodedBody)
 import Network.HTTP.Simple
 import Network.HTTP.Types.Status (status500)
@@ -105,13 +106,8 @@ getRecommendations auth req = spotifyGet auth "/recommendations" $ removeNothing
   ]
 
 spotifyGet :: (FromJSON r, Show r) => Text -> String -> Query -> IO r
-spotifyGet token path query = do
-  let requestWithHeaders = setRequestQueryString (traceShowId query) $ setRequestBearerAuth (encodeUtf8 token) $ parseRequest_ (baseURL ++ path)
-  response <- httpJSONEither (traceShowId requestWithHeaders)
-
-  when ((getResponseStatusCode (traceShowId response)) /= 200) $
-    throwErr (getResponseStatus response) ("failed to get " ++ path)
-
-  return $ getResponseBody response
-
-  eitherStatusIO status500 $ mapLeft show $ getResponseBody response
+spotifyGet token path query = get
+  . setRequestQueryString query
+  . setRequestBearerAuth (encodeUtf8 token)
+  . parseRequest_
+  $ baseURL ++ path
