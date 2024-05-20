@@ -50,8 +50,7 @@ retryAfter response = do
     else seconds
 
 getWithAttempts :: (FromJSON r, Show r) => Int -> Request -> IO r
-getWithAttempts 0 _ = throwErr status500 ("retried maximum number of times")
-getWithAttempts attempts request = do
+getWithAttempts retries request = do
   response <- httpJSONEither (traceShowId request)
   let code = getResponseStatusCode (traceShowId response)
 
@@ -59,12 +58,14 @@ getWithAttempts attempts request = do
   let ok = code `elem` [200]
 
   let result | shouldRetry = do
-                   let delaySeconds = fromMaybe 5 $ retryAfter response
-                   threadDelay $ delaySeconds * 1000000
-                   getWithAttempts (attempts - 1) request
+                 let delaySeconds = fromMaybe 5 $ retryAfter response
+                 threadDelay $ delaySeconds * 1000000
+                 if retries <= 0
+                   then throwErr status500 "quota exceeded!"
+                   else getWithAttempts (retries - 1) request
              | ok          = eitherStatusIO status500 . mapLeft show . getResponseBody $ response
              | otherwise   = throwErr (getResponseStatus response) "failed to get"
   result
 
 get :: (FromJSON r, Show r) => Request -> IO r
-get request = getWithAttempts 5 request
+get request = getWithAttempts 3 request
