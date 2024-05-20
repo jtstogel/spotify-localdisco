@@ -1,7 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module GeoHashSpec (spec) where
 
-import Data.Ratio
 import Data.List (isPrefixOf)
+import Data.Ratio
 import GeoHash
 import Test.Hspec
 

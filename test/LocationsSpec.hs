@@ -8,12 +8,15 @@ import Test.Hspec
 spec :: Spec
 spec = do
   describe "postal lookup" $ do
-    let postalLookup = Locations.buildPostalCodeLookup [ PostalCodeLocation
-            { postalCode = "94110"
-            , latitude =  37.76001572
-            , longitude = -122.42731774
-            , placeName = "San Francisco"
-            }]
+    let postalLookup =
+          Locations.buildPostalCodeLookup
+            [ PostalCodeLocation
+                { postalCode = "94110",
+                  latitude = 37.76001572,
+                  longitude = -122.42731774,
+                  placeName = "San Francisco"
+                }
+            ]
 
     it "should error if postal code does not exist" $ do
       lookupGeoHash postalLookup "does not exist" `shouldBe` (Left "postal code not found")
