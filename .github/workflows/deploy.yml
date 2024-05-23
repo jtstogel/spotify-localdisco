@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          path: './web'
+          cache-dependency-path: '**/package-lock.json'
       - name: Install dependencies
         run: npm ci
       - name: Build
