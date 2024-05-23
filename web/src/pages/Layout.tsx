@@ -7,7 +7,10 @@ const Layout = () => {
   return (
     <>
       <div className="topnav">
-        <img className="logo" src={Logo} alt="Local Disco Logo" width={64} />
+        <div className="logo-container">
+          <img className="logo" src={Logo} alt="Local Disco Logo" width={64} />
+          <span>Local Disco</span>
+        </div>
         <div className="spotify-account-icon"><SpotifyAccountIcon /></div>
       </div>
       <Outlet />

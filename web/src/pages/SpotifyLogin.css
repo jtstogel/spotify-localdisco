@@ -1,0 +1,23 @@
+.login-button {
+    background-color: #fae2c7;
+    display: block;
+    margin: auto;
+    padding: 12px 36px 12px;
+    border-radius: 24px;
+    margin-top: 32px;
+    /* border-width: 0px; */
+    border-color: #47538f;
+
+
+    letter-spacing: 2px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: #47538f;
+
+    transition: opacity .3s;
+    opacity: 100%;
+    &:hover {
+        opacity: 80%;
+    }
+}

@@ -1,6 +1,5 @@
 /* Add a black background color to the top navigation */
 .topnav {
-    background-color: #F4EDEA;
     display: flex;
     overflow: hidden;
     justify-content: space-between;
@@ -11,6 +10,22 @@
 }
 
 .logo {
-    width: 64px;
-    height: 64px;
+    width: 58px;
+    height: 60px;
+    object-fit:cover;
+    background-color: #fae2c7;
+    border-radius: 33%;
+    border-width: 2px;
+    border-color: black;
+    border-style: solid;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 16px;
+    text-transform: lowercase;
+    font-weight: 700px;
 }

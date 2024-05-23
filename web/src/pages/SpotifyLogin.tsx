@@ -3,6 +3,7 @@ import { generateOAuthParams, redirectToSpotifyOAuth2 } from "../features/spotif
 import { useAppDispatch } from "../app/hooks";
 import { oAuthFlowInitiated } from "../features/spotify/spotifySlice";
 import { saveStore } from "../app/store";
+import './SpotifyLogin.css';
 
 const SpotifyLogin = () => {
     const { data: clientId, isLoading, error } = useGetSpotifyClientIdQuery();
@@ -21,7 +22,7 @@ const SpotifyLogin = () => {
 
     return (
         <div>
-            <button onClick={login}>Login with Spotify</button>
+            <button className="login-button" onClick={login}>Login with Spotify</button>
         </div>
     )
 };

@@ -11,6 +11,12 @@ const SpotifyAuthCodeRedirect = () => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
+    const err = searchParams.get("error") ?? "";
+    if (err) {
+      navigate('/');
+      return;
+    }
+
     const code = searchParams.get("code") ?? "";
     dispatch(authCodeReceived(code));
   }, [searchParams, dispatch]);
