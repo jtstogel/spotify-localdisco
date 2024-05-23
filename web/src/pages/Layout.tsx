@@ -9,7 +9,7 @@ const Layout = () => {
       <div className="topnav">
         <div className="logo-container">
           <img className="logo" src={Logo} alt="Local Disco Logo" width={64} />
-          <span>Local Disco</span>
+          <span>local disco</span>
         </div>
         <div className="spotify-account-icon"><SpotifyAccountIcon /></div>
       </div>

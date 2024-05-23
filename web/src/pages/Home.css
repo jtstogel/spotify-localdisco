@@ -1,3 +1,5 @@
+@import '../vars.css';
+
 .App {
   text-align: center;
 }
@@ -58,5 +60,25 @@
 @-webkit-keyframes ellipsis {
   to {
     width: 1.5em;
+  }
+}
+
+.form-box {
+  background-color: var(--accent-color);
+  display: block;
+  max-width: min(500px, 66%);
+  height: 300px;
+  border-style: solid;
+  border-color: var(--dark-color);
+  border-radius: 12px;
+  border-width: 2px;
+  margin: auto;
+  margin-top: 36px;
+  padding: 24px;
+
+  .submit-button {
+    background-color: #e8baae;
+    border-radius: 12px;
+    border-width: 0px;
   }
 }

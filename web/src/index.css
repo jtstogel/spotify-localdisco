@@ -1,9 +1,11 @@
+@import './vars.css';
+
 body {
   margin: 0;
   font-family: Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #a3cacb;
+  background-color: var(--background-color);
 }
 
 code {

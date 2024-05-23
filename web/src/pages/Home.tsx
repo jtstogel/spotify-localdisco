@@ -62,24 +62,26 @@ const Home = () => {
 
   return (
     <div className="App">
-      <form onSubmit={handleSubmit}>
-        <label>
-          Postal code:
-          <input value={postalCode} onChange={e => setPostalCode(e.target.value)}></input>
-        </label>
-        <br />
-        <label>
-          Radius (miles):
-          <input value={radiusMiles} onChange={e => setRadiusMiles(e.target.value)} type="number"></input>
-        </label>
-        <br />
-        <label>
-          Days out:
-          <input value={days} onChange={e => setDays(e.target.value)} type="number"></input>
-        </label>
-        <br />
-        <input type="submit" value="Create playlist"></input>
-      </form>
+      <div className="form-box">
+        <form onSubmit={handleSubmit}>
+          <label>
+            Postal code:
+            <input value={postalCode} onChange={e => setPostalCode(e.target.value)}></input>
+          </label>
+          <br />
+          <label>
+            Radius (miles):
+            <input value={radiusMiles} onChange={e => setRadiusMiles(e.target.value)} type="number"></input>
+          </label>
+          <br />
+          <label>
+            Days out:
+            <input value={days} onChange={e => setDays(e.target.value)} type="number"></input>
+          </label>
+          <br />
+          <input type="submit" value="Create playlist" className="submit-button"></input>
+        </form>
+      </div>
     </div>
   )
 }

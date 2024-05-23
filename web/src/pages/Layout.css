@@ -1,3 +1,5 @@
+@import '../vars.css';
+
 /* Add a black background color to the top navigation */
 .topnav {
     display: flex;
@@ -10,22 +12,20 @@
 }
 
 .logo {
-    width: 58px;
-    height: 60px;
-    object-fit:cover;
-    background-color: #fae2c7;
-    border-radius: 33%;
-    border-width: 2px;
-    border-color: black;
-    border-style: solid;
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    background-color: var(--accent-color);
+    border-radius: 18px;
 }
 
 .logo-container {
     display: flex;
     align-items: center;
     gap: 10px;
+    color: var(--dark-color);
 
     font-size: 16px;
     text-transform: lowercase;
-    font-weight: 700px;
+    font-weight: 700;
 }
