@@ -1,3 +1,5 @@
+@import '../vars.css';
+
 .login-button {
     background-color: #fae2c7;
     display: block;
@@ -5,19 +7,18 @@
     padding: 12px 36px 12px;
     border-radius: 24px;
     margin-top: 32px;
-    /* border-width: 0px; */
-    border-color: #47538f;
-
+    border: 2px solid var(--dark-color);
 
     letter-spacing: 2px;
     font-weight: 800;
     text-transform: uppercase;
     cursor: pointer;
-    color: #47538f;
+    color: var(--dark-color);
 
-    transition: opacity .3s;
+    transition: opacity .3s ease;
     opacity: 100%;
-    &:hover {
-        opacity: 80%;
-    }
+}
+
+.login-button:hover {
+    opacity: 80%;
 }

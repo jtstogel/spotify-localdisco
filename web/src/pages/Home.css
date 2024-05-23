@@ -74,11 +74,21 @@
   border-width: 2px;
   margin: auto;
   margin-top: 36px;
-  padding: 24px;
+  color: var(--dark-color);
 
   .submit-button {
     background-color: #e8baae;
     border-radius: 12px;
     border-width: 0px;
   }
+}
+
+label {
+  text-align: left;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  padding: 6px 36px;
 }
