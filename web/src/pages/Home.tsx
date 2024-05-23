@@ -7,13 +7,29 @@ import { useCreatePlaylistJobMutation, useGetPlaylistJobQuery } from "../feature
 
 const CreatePlaylistStatus = ({ name }: { name: string }) => {
   const [poll, setPoll] = useState(true);
+  const [statuses, setStatuses] = useState<string[]>([]);
+
   const { data, error } = useGetPlaylistJobQuery({ name }, {
     pollingInterval: poll ? 500 : 0,
     skipPollingIfUnfocused: true,
   });
 
+  const message = data?.metadata?.message;
+  if (message && message !== statuses[statuses.length - 1]) {
+    setStatuses(statuses.concat([message]))
+  }
+
   if (!data?.done) {
-    return <div className="loading">{data?.metadata?.message}</div>
+    const succeededStatuses = statuses.slice(0, statuses.length - 1);
+    const pendingStatus = statuses[statuses.length - 1];
+
+    return <div style={{padding: '24px'}}>
+      <h4>We're doing things...</h4>
+      <ul>
+        {succeededStatuses.map(m => <li>{m} &#10003;</li>)}
+        {pendingStatus ? <li><span className="loading">{pendingStatus}</span></li> : <></>}
+      </ul>
+    </div>
   }
 
   if (poll) {
@@ -27,7 +43,13 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
     </div>
   }
 
-  return <div>{JSON.stringify(data.result)}</div>
+
+  return <div style={{padding: '24px'}}>
+    <h4>Artists playing soon near you</h4>
+    <ul>
+      {data.result?.artists?.map(a => <li>{a}</li>)}
+    </ul>
+  </div>
 }
 
 const Home = () => {
@@ -57,13 +79,13 @@ const Home = () => {
   }
 
   if (response) {
-    return <><CreatePlaylistStatus name={response.name}></CreatePlaylistStatus></>
+    return <div className="form-box"><CreatePlaylistStatus name={response.name}></CreatePlaylistStatus></div>
   }
 
   return (
     <div className="App">
       <div className="form-box">
-        <h4>Create new playlist</h4>
+        <h4>Configure your playlist</h4>
         <form onSubmit={handleSubmit}>
           <div className="row">
             <label htmlFor="postalCode">Postal code (US only)</label>
@@ -77,7 +99,7 @@ const Home = () => {
             <label htmlFor="days">Days</label>
             <input value={days} name="days" onChange={e => setDays(e.target.value)} type="number"></input>
           </div>
-          <input type="submit" value="Create playlist" className="submit-button"></input>
+          <input type="submit" value="create playlist" className="submit-button"></input>
         </form>
       </div>
     </div>

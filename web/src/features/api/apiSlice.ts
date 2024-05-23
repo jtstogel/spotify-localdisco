@@ -37,8 +37,7 @@ declare interface GetJobResponse<Result, Metadata = SimpleStatusMetadata> {
 }
 
 declare interface Playlist {
-    artists: any
-    tracks: any
+    artists: string[]
 }
 
 export const apiSlice = createApi({
