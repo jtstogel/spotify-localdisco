@@ -30,6 +30,10 @@ dependencies:
 - http-types
 - monad-coroutine
 - mtl
+- persistent
+- persistent-sqlite
+- persistent-template
+- resource-pool
 - scotty
 - sort
 - stm

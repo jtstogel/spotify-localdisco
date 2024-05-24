@@ -9,6 +9,7 @@ declare interface CreatePlaylistJobRequest {
     spotifyAccessToken: string
     radiusMiles: number
     days: number
+    spideringDepth: number
 }
 
 declare interface CreatePlaylistJobResponse {

@@ -31,10 +31,11 @@ import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import Web.Scotty (ActionM)
 import qualified Web.Scotty as S
+import qualified Types.CreatePlaylistJobRequest as CreatePlaylistJobRequest
 
 main :: IO ()
 main = do
-  env <- Env.load ".env"
+  env <- Env.load
   postalCodeLookup <- loadPostalCodeLookup "postal-codes.json"
   jobsDB <- Jobs.newDB
 
@@ -136,6 +137,7 @@ createDiscoveryJob appState = do
   let postalCode = CreatePlaylistJobRequest.postalCode request
   let auth = CreatePlaylistJobRequest.spotifyAccessToken request
   let radiusMiles = CreatePlaylistJobRequest.radiusMiles request
+  let spideringDepth = CreatePlaylistJobRequest.spideringDepth request
 
   geoHash <- liftIO $ eitherStatusIO status404 $ Locations.lookupGeoHash (App.postalCodeLookup appState) postalCode
   startTime <- liftIO getCurrentTime
@@ -155,7 +157,7 @@ createDiscoveryJob appState = do
             SearchEventsRequest.pageNumber = 0
           }
 
-  let discoveryCoroutine = CreatePlaylist.discoverSpotify appState auth eventsReq
+  let discoveryCoroutine = CreatePlaylist.discoverSpotify appState auth eventsReq spideringDepth
   _ <- liftIO $ Jobs.runJob (App.jobsDB appState) jobName discoveryCoroutine
 
   S.json $ object ["name" .= jobName]

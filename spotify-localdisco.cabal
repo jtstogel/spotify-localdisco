@@ -27,6 +27,7 @@ library
   exposed-modules:
       App
       CreatePlaylist
+      Database.Schema
       Env
       Errors
       GeoHash
@@ -73,6 +74,10 @@ library
     , http-types
     , monad-coroutine
     , mtl
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , resource-pool
     , scotty
     , sort
     , stm
@@ -105,6 +110,10 @@ executable web-exe
     , http-types
     , monad-coroutine
     , mtl
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , resource-pool
     , scotty
     , sort
     , spotify-localdisco
@@ -143,6 +152,10 @@ test-suite spec
     , http-types
     , monad-coroutine
     , mtl
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , resource-pool
     , scotty
     , sort
     , spotify-localdisco

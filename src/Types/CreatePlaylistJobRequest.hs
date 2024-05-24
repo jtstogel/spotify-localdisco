@@ -13,7 +13,8 @@ data CreatePlaylistJobRequest = CreatePlaylistJobRequest
   { spotifyAccessToken :: !Text,
     postalCode :: !Text,
     radiusMiles :: !Int,
-    days :: !Int
+    days :: !Int,
+    spideringDepth :: !Int
   }
   deriving (Generic)
 

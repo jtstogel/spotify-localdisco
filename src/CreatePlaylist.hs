@@ -117,27 +117,27 @@ getFollowedArtists auth = listN (Spotify.listFollowedArtists auth) makeNextReque
 getRecommendations :: T.Text -> GetRecommendationsRequest.GetRecommendationsRequest -> IO [Track.Track]
 getRecommendations auth = fmap GetRecommendationsResponse.tracks . Spotify.getRecommendations auth
 
-recommendationsForTrack :: T.Text -> Int -> Track.Track -> IO [Track.Track]
-recommendationsForTrack auth limit track =
+recommendationsForTrack :: T.Text -> Track.Track -> IO [Track.Track]
+recommendationsForTrack auth track =
   getRecommendations
     auth
     ( traceShowId
         ( GetRecommendationsRequest.GetRecommendationsRequest
             { GetRecommendationsRequest.seedTracks = traceShowId [Track.id track],
               GetRecommendationsRequest.seedArtists = [],
-              GetRecommendationsRequest.limit = limit
+              GetRecommendationsRequest.limit = 20
             }
         )
     )
 
-recommendationsForArtist :: T.Text -> Int -> Artist.Artist -> IO [Track.Track]
-recommendationsForArtist auth limit artist =
+recommendationsForArtist :: T.Text -> Artist.Artist -> IO [Track.Track]
+recommendationsForArtist auth artist =
   getRecommendations
     auth
     ( GetRecommendationsRequest.GetRecommendationsRequest
         { GetRecommendationsRequest.seedArtists = [Artist.id artist],
           GetRecommendationsRequest.seedTracks = [],
-          GetRecommendationsRequest.limit = limit
+          GetRecommendationsRequest.limit = 20
         }
     )
 
@@ -156,8 +156,8 @@ searchEvents auth = listN (Ticketmaster.searchEvents auth) makeNextRequest getIt
 attractionNamesFromEvent :: Event.Event -> [T.Text]
 attractionNamesFromEvent = maybe [] (map Attraction.name) . Event.attractions . Event._embedded
 
-discoverSpotify :: App.AppState -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
-discoverSpotify appState spotifyAuth eventsRequest = do
+discoverSpotify :: App.AppState -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
+discoverSpotify appState spotifyAuth eventsRequest spideringDepth = do
   Jobs.yieldStatus "Finding local events"
   -- You're only allowed to get 1000 events from the Ticketmaster API...
   events <- lift $ searchEvents (App.ticketmasterConsumerKey appState) eventsRequest 1000
@@ -166,19 +166,19 @@ discoverSpotify appState spotifyAuth eventsRequest = do
   topArtists <- lift $ getTopArtists spotifyAuth 100
 
   Jobs.yieldStatus "Getting your top tracks"
-  topTracks <- lift $ getTopTracks spotifyAuth 100
+  topTracks <- lift $ getTopTracks spotifyAuth 200
 
   Jobs.yieldStatus "Getting your followed artists"
-  followedArtists <- lift $ getFollowedArtists spotifyAuth 100
+  followedArtists <- lift $ getFollowedArtists spotifyAuth 200
 
   Jobs.yieldStatus "Getting your saved tracks"
-  savedTracks <- lift $ getSavedTracks spotifyAuth 100
+  savedTracks <- lift $ getSavedTracks spotifyAuth 200
 
   Jobs.yieldStatus "Finding some new music based on your top tracks"
-  tracksFromTopTracks <- lift $ mapM (recommendationsForTrack spotifyAuth 20) (take 20 topTracks)
+  tracksFromTopTracks <- lift $ mapM (recommendationsForTrack spotifyAuth) (take spideringDepth topTracks)
 
   Jobs.yieldStatus "Finding some new music based on your top artists"
-  tracksFromTopArtists <- lift $ mapM (recommendationsForArtist spotifyAuth 20) (take 20 topArtists)
+  tracksFromTopArtists <- lift $ mapM (recommendationsForArtist spotifyAuth) (take spideringDepth topArtists)
 
   Jobs.yieldStatus "Putting it all together"
   let tracks = topTracks ++ savedTracks ++ concat tracksFromTopTracks ++ concat tracksFromTopArtists

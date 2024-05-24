@@ -59,6 +59,7 @@ const Home = () => {
   const [postalCode, setPostalCode] = useState('94110');
   const [radiusMiles, setRadiusMiles] = useState('10');
   const [days, setDays] = useState('120');
+  const [spideringDepth, setSpideringDepth] = useState('20');
 
   useEffect(() => {
     if (!authTokens?.accessToken) {
@@ -74,7 +75,8 @@ const Home = () => {
       radiusMiles: radiusMiles ? Number(radiusMiles) : 10,
       days: days ? Number(days) : 30,
       postalCode,
-      spotifyAccessToken
+      spotifyAccessToken,
+      spideringDepth
     })
   }
 
@@ -98,6 +100,10 @@ const Home = () => {
           <div className="row">
             <label htmlFor="days">Days</label>
             <input value={days} name="days" onChange={e => setDays(e.target.value)} type="number"></input>
+          </div>
+          <div className="row">
+            <label htmlFor="spiderDepth">Spider depth</label>
+            <input value={spideringDepth} name="spiderDepth" onChange={e => setSpideringDepth(e.target.value)} type="number"></input>
           </div>
           <input type="submit" value="create playlist" className="submit-button"></input>
         </form>

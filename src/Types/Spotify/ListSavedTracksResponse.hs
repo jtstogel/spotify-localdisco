@@ -1,12 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Types.Spotify.ListSavedTracksResponse
-  ( ListSavedTracksResponse(..)
-  , SavedTrackObject(..)
-  ) where
+  ( ListSavedTracksResponse (..),
+    SavedTrackObject (..),
+  )
+where
 
 import Data.Aeson
-import GHC.Generics
+import GHC.Generics (Generic)
 import qualified Types.Spotify.Track as Track
 
 newtype SavedTrackObject = SavedTrackObject
@@ -15,13 +16,15 @@ newtype SavedTrackObject = SavedTrackObject
   deriving (Generic, Show)
 
 data ListSavedTracksResponse = ListSavedTracksResponse
-  { offset :: Maybe Int
-  , items :: Maybe [SavedTrackObject]
+  { offset :: Maybe Int,
+    items :: Maybe [SavedTrackObject]
   }
   deriving (Generic, Show)
 
-
 instance FromJSON ListSavedTracksResponse
+
 instance FromJSON SavedTrackObject
+
 instance ToJSON ListSavedTracksResponse
+
 instance ToJSON SavedTrackObject

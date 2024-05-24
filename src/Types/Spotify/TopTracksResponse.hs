@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Types.Spotify.TopTracksResponse
-  ( TopTracksResponse(..)
+  ( TopTracksResponse (..),
   )
-  where
+where
 
-import Data.Aeson
+import Data.Aeson (FromJSON)
 import Data.Text (Text)
-import GHC.Generics
+import GHC.Generics (Generic)
 import qualified Types.Spotify.Track as Track
 
 data TopTracksResponse = TopTracksResponse

@@ -1,6 +1,7 @@
 module Env
   ( Env (..),
     load,
+    loadFromFile,
   )
 where
 
@@ -9,7 +10,8 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Text as T
-import Errors (eitherFromMaybe, eitherIO)
+import Errors (eitherFromMaybe, eitherIO, maybeIO)
+import System.Environment (lookupEnv)
 
 data Env = Env
   { spotifyClientID :: Text,
@@ -42,11 +44,20 @@ parseLine line = second (T.pack . tail) . flip List.splitAt line <$> List.elemIn
 parseEnv :: String -> Either String (Map.Map String Text)
 parseEnv = fmap Map.fromList . eitherFromMaybe "failed to parse env lines" . mapM parseLine . List.lines
 
-load :: String -> IO Env
-load filename = do
+loadFromFile :: String -> IO Env
+loadFromFile filename = do
   content <- readFile filename
 
   envMap <- eitherIO $ parseEnv content
   let get k = eitherFromMaybe ("failed to find env key " ++ k) $ Map.lookup k envMap
 
   eitherIO $ buildEnv get
+
+getFromEnv :: String -> IO Text
+getFromEnv variable = do
+  maybeValue <- lookupEnv variable
+  value <- maybeIO ("failed to lookup environment variable for " <> variable) maybeValue
+  return $ T.pack value
+
+load :: IO Env
+load = buildEnv getFromEnv

@@ -75,17 +75,18 @@ runJobFinally db name finally coroutine = do
 
   _ <- recordStatus $ JobStatus {message = "Queued job..."}
 
-  _ <- forkFinally
-    ( do
-        resultEither <- Exception.try $ pogoStickM recordYieldedStatus coroutine
-        case resultEither of
-          Left e -> case e of
-            ErrStatus _ _ -> recordError e
-            _ -> recordError $ ErrStatus status500 (show e)
-          Right r -> recordResult (toJSON r)
-    )
-    (const finally)
-  
+  _ <-
+    forkFinally
+      ( do
+          resultEither <- Exception.try $ pogoStickM recordYieldedStatus coroutine
+          case resultEither of
+            Left e -> case e of
+              ErrStatus _ _ -> recordError e
+              _ -> recordError $ ErrStatus status500 (show e)
+            Right r -> recordResult (toJSON r)
+      )
+      (const finally)
+
   return ()
 
 runJob :: (ToJSON r) => DB -> Text -> Job r -> IO ()
