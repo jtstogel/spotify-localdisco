@@ -74,9 +74,9 @@ const Home = () => {
     createPlaylistJob({
       radiusMiles: radiusMiles ? Number(radiusMiles) : 10,
       days: days ? Number(days) : 30,
+      spideringDepth: spideringDepth ? Number(spideringDepth) : 1,
       postalCode,
       spotifyAccessToken,
-      spideringDepth
     })
   }
 
