@@ -41,9 +41,16 @@ declare interface Playlist {
     artists: string[]
 }
 
+function baseUri(): string {
+    if (import.meta.env.PROD) {
+        return 'https://api-disco.stowgulls.com'
+    }
+    return 'http://127.0.0.1:8080'
+}
+
 export const apiSlice = createApi({
     baseQuery: fetchBaseQuery({
-        baseUrl: "http://localhost:8080",
+        baseUrl: baseUri(),
         mode: 'cors',
     }),
     reducerPath: "api",

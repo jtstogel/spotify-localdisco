@@ -23,7 +23,7 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
     const succeededStatuses = statuses.slice(0, statuses.length - 1);
     const pendingStatus = statuses[statuses.length - 1];
 
-    return <div style={{padding: '24px'}}>
+    return <div style={{ padding: '24px' }}>
       <h4>We're doing things...</h4>
       <ul>
         {succeededStatuses.map(m => <li>{m} &#10003;</li>)}
@@ -44,7 +44,7 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
   }
 
 
-  return <div style={{padding: '24px'}}>
+  return <div style={{ padding: '24px' }}>
     <h4>Artists playing soon near you</h4>
     <ul>
       {data.result?.artists?.map(a => <li>{a}</li>)}
@@ -61,11 +61,10 @@ const Home = () => {
   const [days, setDays] = useState('120');
   const [spideringDepth, setSpideringDepth] = useState('20');
 
-  useEffect(() => {
-    if (!authTokens?.accessToken) {
-      navigate('/spotify/login')
-    }
-  }, [authTokens?.accessToken, navigate])
+  if (!authTokens?.accessToken) {
+    useEffect(() => navigate('/spotify/login'));
+    return <></>
+  }
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
