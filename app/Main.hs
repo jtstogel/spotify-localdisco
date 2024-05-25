@@ -31,7 +31,6 @@ import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import Web.Scotty (ActionM)
 import qualified Web.Scotty as S
-import qualified Types.CreatePlaylistJobRequest as CreatePlaylistJobRequest
 
 main :: IO ()
 main = do
@@ -167,6 +166,7 @@ getDiscoveryJob appState = do
   jobId <- S.captureParam "id" :: ActionM Text
   let jobName = "discoveryJobs/" <> jobId
   job <- liftIO $ Jobs.getJob (App.jobsDB appState) jobName
+  S.addHeader "Cache-Control" "no-store"
   S.json job
 
 allowCors :: Middleware

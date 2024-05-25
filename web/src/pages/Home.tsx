@@ -11,7 +11,6 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
 
   const { data, error } = useGetPlaylistJobQuery({ name }, {
     pollingInterval: poll ? 500 : 0,
-    skipPollingIfUnfocused: true,
   });
 
   const message = data?.metadata?.message;
