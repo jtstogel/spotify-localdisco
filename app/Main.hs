@@ -4,8 +4,9 @@ module Main (main) where
 
 import qualified App
 import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (ask)
+import Control.Monad.Trans.Reader (ask, asks)
 import qualified CreatePlaylist
 import Data.Aeson (KeyValue ((.=)), eitherDecode, object)
 import qualified Data.ByteString.Lazy as B
@@ -26,10 +27,15 @@ import qualified Locations
 import Network.HTTP.Types.Status (Status (statusMessage), status404)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
+import qualified Spotify
 import qualified Storage
 import Text.Read (readMaybe)
+import qualified Types.AuthenticateWithSpotifyRequest as AuthenticateWithSpotifyRequest
+import qualified Types.AuthenticateWithSpotifyResponse as AuthenticateWithSpotifyResponse
 import qualified Types.CreatePlaylistJobRequest as CreatePlaylistJobRequest
 import qualified Types.GetSpotifyClientIdResponse as GetSpotifyClientIdResponse
+import qualified Types.Spotify.AuthenticateResponse as SpotifyAuthenticateResponse
+import qualified Types.Spotify.UserProfile as SpotifyUserProfile
 import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import Web.Scotty (ActionM)
@@ -186,15 +192,51 @@ getDiscoveryJob = do
   lift $ S.addHeader "Cache-Control" "no-store"
   lift . S.json $ job
 
-createUser :: App.AppT ActionM ()
-createUser = do
-  App.runWithDB . Storage.upsertDiscoUser $ Storage.DiscoUser {Storage.discoUserUuid = "uuid-1234", Storage.discoUserSpotifyId = "spotify-5678"}
-  lift $ S.text "ok"
+exchangeAuthCode :: AuthenticateWithSpotifyRequest.AuthenticateWithSpotifyRequest -> App.AppT ActionM SpotifyAuthenticateResponse.AuthenticateResponse
+exchangeAuthCode req = do
+  clientId <- asks App.spotifyClientID
+  clientSecret <- asks App.spotifyClientSecret
+  let code = AuthenticateWithSpotifyRequest.code req
+  let rediectUri = AuthenticateWithSpotifyRequest.redirectUri req
+  liftIO $ Spotify.exchangeAuthCode clientId clientSecret code rediectUri
 
-getUser :: App.AppT ActionM ()
-getUser = do
-  user <- App.runWithDB $ Storage.getDiscoUser "uuid-1234"
-  lift $ S.text $ LazyText.pack (fromMaybe "not found" (Storage.discoUserUuid <$> user))
+getOrCreateUserId :: (MonadUnliftIO m) => Text -> Storage.DatabaseT m Text
+getOrCreateUserId spotifyUserId = do
+  maybeUser <- Storage.getDiscoUserBySpotifyId spotifyUserId
+  case maybeUser of
+    Just user -> return $ Storage.discoUserUuid user
+    Nothing -> do
+      userId <- liftIO . fmap UUID.toText $ UUIDV4.nextRandom
+      Storage.upsertDiscoUser
+        Storage.DiscoUser
+          { Storage.discoUserUuid = userId,
+            Storage.discoUserSpotifyId = spotifyUserId
+          }
+      return userId
+
+authenticateWithSpotify :: App.AppT ActionM ()
+authenticateWithSpotify = do
+  now <- liftIO getCurrentTime
+
+  request <- lift $ S.jsonData :: App.AppT ActionM AuthenticateWithSpotifyRequest.AuthenticateWithSpotifyRequest
+  authResponse <- exchangeAuthCode request
+  let authExpireTime = addUTCTime (fromIntegral . SpotifyAuthenticateResponse.expires_in $ authResponse) now
+
+  userProfile <- liftIO $ Spotify.getUserProfile (T.pack . SpotifyAuthenticateResponse.access_token $ authResponse)
+  let spotifyUserId = SpotifyUserProfile.user_id userProfile
+
+  userId <- App.runWithDB $ do
+    Storage.upsertSpotifyUserAuth
+      Storage.SpotifyUserAuth
+        { Storage.spotifyUserAuthSpotifyUserId = spotifyUserId,
+          Storage.spotifyUserAuthAccessToken = T.pack . SpotifyAuthenticateResponse.access_token $ authResponse,
+          Storage.spotifyUserAuthRefreshToken = T.pack . SpotifyAuthenticateResponse.refresh_token $ authResponse,
+          Storage.spotifyUserAuthExpireTime = authExpireTime
+        }
+    getOrCreateUserId spotifyUserId
+
+  lift . S.json $ AuthenticateWithSpotifyResponse.AuthenticateWithSpotifyResponse
+    { AuthenticateWithSpotifyResponse.userId = userId }
 
 allowCors :: Middleware
 allowCors = cors (const $ Just appCorsResourcePolicy)
@@ -211,6 +253,7 @@ routes appState = S.scotty 8080 $ do
   S.defaultHandler (S.Handler handleException)
   S.middleware allowCors
 
+  S.post "/spotify/authenticate" $ App.runAppT appState authenticateWithSpotify
   S.get "/spotify/clientId" $ App.runAppT appState getSpotifyClientId
   S.get "/spotify/topArtists" $ App.runAppT appState getTopArtists
   S.get "/spotify/topTracks" $ App.runAppT appState getTopTracks
@@ -219,5 +262,3 @@ routes appState = S.scotty 8080 $ do
   S.get "/localArtists" $ App.runAppT appState getEvents
   S.post "/discoveryJobs" $ App.runAppT appState createDiscoveryJob
   S.get "/discoveryJobs/:id" $ App.runAppT appState getDiscoveryJob
-  S.get "/createUser" $ App.runAppT appState createUser
-  S.get "/user" $ App.runAppT appState getUser

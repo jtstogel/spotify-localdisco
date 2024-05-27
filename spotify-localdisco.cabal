@@ -36,10 +36,13 @@ library
       Spotify
       Storage
       Ticketmaster
+      Types.AuthenticateWithSpotifyRequest
+      Types.AuthenticateWithSpotifyResponse
       Types.CreatePlaylistJobRequest
       Types.GetSpotifyClientIdResponse
       Types.Job
       Types.Spotify.Artist
+      Types.Spotify.AuthenticateResponse
       Types.Spotify.GetRecommendationsRequest
       Types.Spotify.GetRecommendationsResponse
       Types.Spotify.ListFollowedArtistsRequest
@@ -50,6 +53,7 @@ library
       Types.Spotify.TopArtistsResponse
       Types.Spotify.TopTracksResponse
       Types.Spotify.Track
+      Types.Spotify.UserProfile
       Types.SpotifyDiscovery
       Types.Ticketmaster.Attraction
       Types.Ticketmaster.Event
