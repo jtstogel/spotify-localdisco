@@ -63,7 +63,7 @@ instance ToJSON JobStatus
 type Job r = Coroutine (Yield JobStatus) IO r
 
 setJobDetails :: DB -> Text -> JobDetails -> IO ()
-setJobDetails (DB jobsVar) name details = atomically . modifyTVar jobsVar $ M.insert name details
+setJobDetails (DB jobsVar) name = atomically . modifyTVar jobsVar . M.insert name
 
 -- Runs a job in another thread and updates the shared job status at every yield.
 runJobFinally :: (ToJSON r) => DB -> Text -> IO () -> Job r -> IO ()

@@ -9,7 +9,10 @@ const SpotifyLogin = () => {
     const { data: clientId, isLoading, error } = useGetSpotifyClientIdQuery();
     const dispatch = useAppDispatch();
 
-    if (isLoading) { return <></> }
+    if (isLoading) {
+        console.log(isLoading);
+        return <></>
+    }
     if (error) { return <div>client load failed: {JSON.stringify(error)}</div> }
 
     const login = async () => {

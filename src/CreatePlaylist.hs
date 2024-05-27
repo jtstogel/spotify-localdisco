@@ -163,16 +163,16 @@ discoverSpotify appState spotifyAuth eventsRequest spideringDepth = do
   events <- lift $ searchEvents (App.ticketmasterConsumerKey appState) eventsRequest 1000
 
   Jobs.yieldStatus "Getting your top artists"
-  topArtists <- lift $ getTopArtists spotifyAuth 100
+  topArtists <- lift $ getTopArtists spotifyAuth 500
 
   Jobs.yieldStatus "Getting your top tracks"
-  topTracks <- lift $ getTopTracks spotifyAuth 200
+  topTracks <- lift $ getTopTracks spotifyAuth 500
 
   Jobs.yieldStatus "Getting your followed artists"
-  followedArtists <- lift $ getFollowedArtists spotifyAuth 200
+  followedArtists <- lift $ getFollowedArtists spotifyAuth 500
 
   Jobs.yieldStatus "Getting your saved tracks"
-  savedTracks <- lift $ getSavedTracks spotifyAuth 200
+  savedTracks <- lift $ getSavedTracks spotifyAuth 500
 
   Jobs.yieldStatus "Finding some new music based on your top tracks"
   tracksFromTopTracks <- lift $ mapM (recommendationsForTrack spotifyAuth) (take spideringDepth topTracks)

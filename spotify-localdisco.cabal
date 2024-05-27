@@ -27,7 +27,6 @@ library
   exposed-modules:
       App
       CreatePlaylist
-      Database.Schema
       Env
       Errors
       GeoHash
@@ -35,6 +34,7 @@ library
       Jobs
       Locations
       Spotify
+      Storage
       Ticketmaster
       Types.CreatePlaylistJobRequest
       Types.GetSpotifyClientIdResponse
@@ -73,21 +73,25 @@ library
     , http-conduit
     , http-types
     , monad-coroutine
+    , monad-logger
     , mtl
     , persistent
     , persistent-sqlite
     , persistent-template
-    , resource-pool
+    , resourcet
     , scotty
     , sort
     , stm
+    , temporary
     , text
     , time
     , transformers
+    , unliftio-core
     , uuid
     , wai
     , wai-cors
     , wai-extra
+    , yesod
   default-language: Haskell2010
 
 executable web-exe
@@ -109,22 +113,26 @@ executable web-exe
     , http-conduit
     , http-types
     , monad-coroutine
+    , monad-logger
     , mtl
     , persistent
     , persistent-sqlite
     , persistent-template
-    , resource-pool
+    , resourcet
     , scotty
     , sort
     , spotify-localdisco
     , stm
+    , temporary
     , text
     , time
     , transformers
+    , unliftio-core
     , uuid
     , wai
     , wai-cors
     , wai-extra
+    , yesod
   default-language: Haskell2010
 
 test-suite spec
@@ -134,6 +142,7 @@ test-suite spec
       GeoHashSpec
       JobsSpec
       LocationsSpec
+      StorageSpec
       Paths_spotify_localdisco
   autogen-modules:
       Paths_spotify_localdisco
@@ -151,21 +160,25 @@ test-suite spec
     , http-conduit
     , http-types
     , monad-coroutine
+    , monad-logger
     , mtl
     , persistent
     , persistent-sqlite
     , persistent-template
-    , resource-pool
+    , resourcet
     , scotty
     , sort
     , spotify-localdisco
     , stm
+    , temporary
     , text
     , time
     , transformers
+    , unliftio-core
     , uuid
     , wai
     , wai-cors
     , wai-extra
+    , yesod
   default-language: Haskell2010
   build-tool-depends: hspec-discover:hspec-discover == 2.*

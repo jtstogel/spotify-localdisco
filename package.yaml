@@ -23,17 +23,20 @@ dependencies:
 - aeson
 - array
 - base >= 4.7 && < 5
+- yesod
+- persistent
+- persistent-sqlite
+- persistent-template
+- monad-logger
+- resourcet
 - blaze-html
 - bytestring
 - containers
 - http-conduit
 - http-types
 - monad-coroutine
+- unliftio-core
 - mtl
-- persistent
-- persistent-sqlite
-- persistent-template
-- resource-pool
 - scotty
 - sort
 - stm
@@ -44,6 +47,7 @@ dependencies:
 - wai
 - wai-cors
 - wai-extra
+- temporary # Test-only, but whatevs
 
 ghc-options:
 - -Wall
