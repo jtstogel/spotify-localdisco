@@ -43,6 +43,7 @@ import qualified Types.Ticketmaster.Event as Event
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import qualified Types.Ticketmaster.SearchEventsResponse as SearchEventsResponse
 import Utils (chunks)
+import Data.Time (UTCTime, NominalDiffTime, addUTCTime)
 
 -- Gets n items from a List API.
 listN :: (Monad m) => (req -> m res) -> (req -> res -> Maybe req) -> (res -> [item]) -> req -> Int -> m [item]
@@ -168,23 +169,36 @@ repeatedMap = foldl' (\m (k, v) -> insertWith (++) k [v] m) M.empty
 nubUsing :: (Eq a) => (e -> a) -> [e] -> [e]
 nubUsing f = nubBy (\a b -> f a == f b)
 
+intervals :: (UTCTime, UTCTime) -> NominalDiffTime -> [(UTCTime, UTCTime)]
+intervals (start, end) maxDuration
+  | maxEndTime < end = (start, maxEndTime) : intervals (maxEndTime, end) maxDuration
+  | otherwise = [(start, end)]
+  where maxEndTime = addUTCTime maxDuration start
+
 discoverSpotify :: App.AppState -> T.Text -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
 discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth = do
   Jobs.yieldStatus "Finding local events"
-  -- You're only allowed to get 1000 events from the Ticketmaster API...
-  events <- lift $ searchEvents (App.ticketmasterConsumerKey appState) eventsRequest 1000
+  -- You're only allowed to get 1000 events from the Ticketmaster API..
+  -- So break up the search requests into 3 week chunks.
+  let eventStartTime = SearchEventsRequest.startTime eventsRequest
+  let eventEndTime = SearchEventsRequest.endTime eventsRequest
+  let maxInterval = fromInteger (3 * 7 * 24 * 60 * 60) :: NominalDiffTime
+  eventResponses <- forM (intervals (eventStartTime, eventEndTime) maxInterval) $ \(start, end) -> do
+    let req = eventsRequest { SearchEventsRequest.startTime = start, SearchEventsRequest.endTime = end }
+    lift $ searchEvents (App.ticketmasterConsumerKey appState) req 1000
+  let events = concat eventResponses
 
   Jobs.yieldStatus "Getting your top artists"
-  topArtists <- lift $ getTopArtists spotifyAuth 500
+  topArtists <- lift $ getTopArtists spotifyAuth 1000
 
   Jobs.yieldStatus "Getting your top tracks"
-  topTracks <- lift $ getTopTracks spotifyAuth 500
+  topTracks <- lift $ getTopTracks spotifyAuth 1000
 
   Jobs.yieldStatus "Getting your followed artists"
-  followedArtists <- lift $ getFollowedArtists spotifyAuth 500
+  followedArtists <- lift $ getFollowedArtists spotifyAuth 1000
 
   Jobs.yieldStatus "Getting your saved tracks"
-  savedTracks <- lift $ getSavedTracks spotifyAuth 500
+  savedTracks <- lift $ getSavedTracks spotifyAuth 1000
 
   Jobs.yieldStatus "Finding some new music based on your top tracks"
   tracksFromTopTracks <- lift $ mapM (recommendationsForTrack spotifyAuth) (take spideringDepth topTracks)

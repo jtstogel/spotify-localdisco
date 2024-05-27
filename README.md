@@ -26,3 +26,5 @@ TODO:
 - [ ] Reduce `scope` when requesting spotify auth.
 - [ ] Why was andrew unable to login?
 - [ ] Overwrite the existing playlist instead of always making a new one.
+- [ ] Do fuzzy string matching when comparing artist names between Ticketmaster and Spotify.
+
