@@ -60,32 +60,26 @@ retryAfter response = do
   -- Cap at 30 seconds. We don't have all day.
   return $ min seconds 30
 
-getWithRetries :: (FromJSON r, Show r) => Int -> Request -> IO r
-getWithRetries retries request = do
+doWithRetries :: (FromJSON r, Show r) => Int -> [Int] -> Request -> IO r
+doWithRetries retries retryCodes request = do
   response <- httpJSONEither (traceShowId request)
   let code = getResponseStatusCode (traceShowId response)
 
-  let shouldRetry = code `elem` [429, 500]
-  let ok = code == 200
+  let shouldRetry = code `elem` retryCodes
+  let ok = 200 <= code && code < 300
 
   let result
         | shouldRetry && retries == 0 = throwErr status500 "quota exceeded!"
         | shouldRetry && retries > 0 = do
             let delaySeconds = fromMaybe 5 $ retryAfter response
             threadDelay $ delaySeconds * 1000000
-            getWithRetries (retries - 1) request
+            doWithRetries (retries - 1) retryCodes request
         | ok = eitherStatusIO status500 . mapLeft show . getResponseBody $ response
-        | otherwise = throwErr (getResponseStatus response) "failed to get"
+        | otherwise = throwErr (getResponseStatus response) "request failed"
   result
 
 get :: (FromJSON r, Show r) => Request -> IO r
-get = getWithRetries 3
+get = doWithRetries 3 [429, 500]
 
 post :: (FromJSON r, Show r) => Request -> IO r
-post request = do
-  response <- httpJSONEither (traceShowId request)
-  let code = getResponseStatusCode (traceShowId response)
-
-  if code /= 200
-    then throwErr (getResponseStatus response) "failed to post"
-    else eitherStatusIO status500 . mapLeft show . getResponseBody $ response
+post = doWithRetries 3 [429]

@@ -41,8 +41,14 @@ library
       Types.CreatePlaylistJobRequest
       Types.GetSpotifyClientIdResponse
       Types.Job
+      Types.Spotify.AddTracksRequest
+      Types.Spotify.AddTracksResponse
       Types.Spotify.Artist
       Types.Spotify.AuthenticateResponse
+      Types.Spotify.CreatePlaylistRequest
+      Types.Spotify.CreatePlaylistResponse
+      Types.Spotify.GetArtistTopTracksRequest
+      Types.Spotify.GetArtistTopTracksResponse
       Types.Spotify.GetRecommendationsRequest
       Types.Spotify.GetRecommendationsResponse
       Types.Spotify.ListFollowedArtistsRequest
@@ -61,6 +67,7 @@ library
       Types.Ticketmaster.ListArtistsResponse
       Types.Ticketmaster.SearchEventsRequest
       Types.Ticketmaster.SearchEventsResponse
+      Utils
   other-modules:
       Paths_spotify_localdisco
   autogen-modules:

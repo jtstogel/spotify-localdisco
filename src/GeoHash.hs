@@ -4,6 +4,7 @@ module GeoHash
 where
 
 import Data.Array
+import Utils (chunks)
 
 geoHashLength :: Int
 geoHashLength = 12
@@ -20,11 +21,6 @@ encodePoint (lower, upper) resolution value =
 -- Interleaves two lists, discarding extra elements if lengths mismatch.
 interleave :: [a] -> [a] -> [a]
 interleave x y = concat $ zipWith ((. return) . (:)) x y
-
-chunks :: Int -> [a] -> [[a]]
-chunks 0 _ = error "cannot call chunks with non-postitive chunk size"
-chunks _ [] = []
-chunks n xs = take n xs : chunks n (drop n xs)
 
 alphabet :: Array Int Char
 alphabet = listArray (0, length a - 1) a

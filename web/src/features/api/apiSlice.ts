@@ -53,6 +53,7 @@ declare interface GetJobResponse<Result, Metadata = SimpleStatusMetadata> {
 
 declare interface Playlist {
     artists: string[]
+    playlistLink: string
 }
 
 function baseUri(): string {

@@ -185,7 +185,7 @@ createDiscoveryJob = do
           }
 
   appState <- ask
-  let discoveryCoroutine = CreatePlaylist.discoverSpotify appState auth eventsReq spideringDepth
+  let discoveryCoroutine = CreatePlaylist.discoverSpotify appState auth (Storage.discoUserSpotifyId user) eventsReq spideringDepth
   _ <- liftIO $ Jobs.runJob (App.jobsDB appState) jobName discoveryCoroutine
 
   lift . S.json $ object ["name" .= jobName]

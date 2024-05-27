@@ -14,7 +14,8 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 
 data SpotifyDiscovery = SpotifyDiscovery
-  { artists :: ![Text]
+  { artists :: ![Text],
+    playlistLink :: !Text
   }
   deriving (Generic, Show)
 

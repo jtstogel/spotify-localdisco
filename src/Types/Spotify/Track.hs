@@ -13,7 +13,8 @@ import qualified Types.Spotify.Artist as Artist
 data Track = Track
   { id :: Text,
     artists :: Maybe [Artist.Artist],
-    name :: Text
+    name :: Text,
+    uri :: Text
   }
   deriving (Generic, Show)
 

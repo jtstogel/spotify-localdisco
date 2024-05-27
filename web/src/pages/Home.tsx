@@ -45,6 +45,7 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
 
   return <div style={{ padding: '24px' }}>
     <h4>Artists playing soon near you</h4>
+    <a href={data.result?.playlistLink}>Click to see your playlist</a>
     <ul>
       {data.result?.artists?.map(a => <li>{a}</li>)}
     </ul>

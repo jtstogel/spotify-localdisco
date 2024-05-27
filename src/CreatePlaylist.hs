@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module CreatePlaylist
   ( discoverSpotify,
@@ -10,16 +12,23 @@ module CreatePlaylist
 where
 
 import qualified App
-import Control.Monad (when, (<=<))
+import Control.Monad (forM, when, (<=<))
 import Control.Monad.Trans.Class (lift)
-import Data.List (nub, sort)
+import Data.List (foldl', nub, nubBy, sort)
+import qualified Data.Map as M
+import Data.Map.Strict (insertWith)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Debug.Trace (traceShowId)
 import qualified Jobs
 import qualified Spotify
 import qualified Ticketmaster
+import qualified Types.Spotify.AddTracksRequest as AddTracksRequest
 import qualified Types.Spotify.Artist as Artist
+import qualified Types.Spotify.CreatePlaylistRequest as CreatePlaylistRequest
+import qualified Types.Spotify.CreatePlaylistResponse as CreatePlaylistResponse
+import qualified Types.Spotify.GetArtistTopTracksRequest as GetArtistTopTracksRequest
+import qualified Types.Spotify.GetArtistTopTracksResponse as GetArtistTopTracksResponse
 import qualified Types.Spotify.GetRecommendationsRequest as GetRecommendationsRequest
 import qualified Types.Spotify.GetRecommendationsResponse as GetRecommendationsResponse
 import qualified Types.Spotify.ListFollowedArtistsRequest as ListFollowedArtistsRequest
@@ -35,6 +44,7 @@ import qualified Types.Ticketmaster.Attraction as Attraction
 import qualified Types.Ticketmaster.Event as Event
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import qualified Types.Ticketmaster.SearchEventsResponse as SearchEventsResponse
+import Utils (chunks)
 
 -- Gets n items from a List API.
 listN :: (Monad m) => (req -> m res) -> (req -> res -> Maybe req) -> (res -> [item]) -> req -> Int -> m [item]
@@ -156,8 +166,14 @@ searchEvents auth = listN (Ticketmaster.searchEvents auth) makeNextRequest getIt
 attractionNamesFromEvent :: Event.Event -> [T.Text]
 attractionNamesFromEvent = maybe [] (map Attraction.name) . Event.attractions . Event._embedded
 
-discoverSpotify :: App.AppState -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
-discoverSpotify appState spotifyAuth eventsRequest spideringDepth = do
+repeatedMap :: (Ord k) => [(k, v)] -> M.Map k [v]
+repeatedMap = foldl' (\m (k, v) -> insertWith (++) k [v] m) M.empty
+
+nubUsing :: (Eq a) => (e -> a) -> [e] -> [e]
+nubUsing f = nubBy (\a b -> f a == f b)
+
+discoverSpotify :: App.AppState -> T.Text -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
+discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth = do
   Jobs.yieldStatus "Finding local events"
   -- You're only allowed to get 1000 events from the Ticketmaster API...
   events <- lift $ searchEvents (App.ticketmasterConsumerKey appState) eventsRequest 1000
@@ -180,14 +196,41 @@ discoverSpotify appState spotifyAuth eventsRequest spideringDepth = do
   Jobs.yieldStatus "Finding some new music based on your top artists"
   tracksFromTopArtists <- lift $ mapM (recommendationsForArtist spotifyAuth) (take spideringDepth topArtists)
 
-  Jobs.yieldStatus "Putting it all together"
-  let tracks = topTracks ++ savedTracks ++ concat tracksFromTopTracks ++ concat tracksFromTopArtists
-  let artists = topArtists ++ followedArtists ++ concatMap (fromMaybe [] . Track.artists) tracks
+  let tracks = nubUsing Track.id $ topTracks ++ savedTracks ++ concat tracksFromTopTracks ++ concat tracksFromTopArtists
+  let artists = nubUsing Artist.id $ topArtists ++ followedArtists ++ concatMap (fromMaybe [] . Track.artists) tracks
 
-  let spotifyArtists = nub . sort . map Artist.name $ artists
   let ticketmasterArtists = nub . sort . concatMap attractionNamesFromEvent $ events
+
+  let localArtists = filter (\a -> Artist.name a `elem` ticketmasterArtists) artists
+  let tracksByArtistName = repeatedMap $ concatMap (\t -> maybe [] (map (\a -> (Artist.name a, t))) (Track.artists t)) tracks :: M.Map T.Text [Track.Track]
+
+  artistsWithTracks <- forM localArtists $ \artist -> do
+    Jobs.yieldStatus $ "Getting tracks by " <> Artist.name artist
+    let knownTracks =  fromMaybe [] $ M.lookup (Artist.name artist) tracksByArtistName
+    if length knownTracks >= 3
+      then return (artist, take 3 knownTracks)
+      else do
+        response <- lift $ Spotify.artistTopTracks spotifyAuth $ GetArtistTopTracksRequest.GetArtistTopTracksRequest {GetArtistTopTracksRequest.artistId = Artist.id artist}
+        return (artist, take 3 $ GetArtistTopTracksResponse.tracks response)
+
+  Jobs.yieldStatus "Creating your playlist"
+  playlistResponse <-
+    lift $
+      Spotify.createPlaylist spotifyAuth spotifyUserId $
+        CreatePlaylistRequest.CreatePlaylistRequest
+          { CreatePlaylistRequest.name = "Local Disco",
+            CreatePlaylistRequest.description = "Artists playing near you",
+            CreatePlaylistRequest.public = False
+          }
+  let playlistId = CreatePlaylistResponse.id playlistResponse
+
+  Jobs.yieldStatus "Adding tracks to your playlist"
+  _ <- lift $ forM (chunks 100 $ concatMap snd artistsWithTracks) $ \tracksChunk -> do
+    _ <- Spotify.addTracks spotifyAuth playlistId $ AddTracksRequest.AddTracksRequest {AddTracksRequest.uris = map Track.uri tracksChunk}
+    return ()
 
   return $
     SpotifyDiscovery.SpotifyDiscovery
-      { SpotifyDiscovery.artists = filter (`elem` spotifyArtists) ticketmasterArtists
+      { SpotifyDiscovery.playlistLink = CreatePlaylistResponse.spotify $ CreatePlaylistResponse.external_urls playlistResponse,
+        SpotifyDiscovery.artists = map (Artist.name . fst) artistsWithTracks
       }

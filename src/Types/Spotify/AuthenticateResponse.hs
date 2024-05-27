@@ -11,7 +11,6 @@ where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import qualified Types.Spotify.Track as Track
 
 data AuthenticateResponse = AuthenticateResponse
   { access_token :: Text,
