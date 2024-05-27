@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module CreatePlaylist
@@ -19,7 +18,6 @@ import qualified Data.Map as M
 import Data.Map.Strict (insertWith)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
-import Debug.Trace (traceShowId)
 import qualified Jobs
 import qualified Spotify
 import qualified Ticketmaster
@@ -131,13 +129,11 @@ recommendationsForTrack :: T.Text -> Track.Track -> IO [Track.Track]
 recommendationsForTrack auth track =
   getRecommendations
     auth
-    ( traceShowId
-        ( GetRecommendationsRequest.GetRecommendationsRequest
-            { GetRecommendationsRequest.seedTracks = traceShowId [Track.id track],
-              GetRecommendationsRequest.seedArtists = [],
-              GetRecommendationsRequest.limit = 20
-            }
-        )
+    ( GetRecommendationsRequest.GetRecommendationsRequest
+        { GetRecommendationsRequest.seedTracks = [Track.id track],
+          GetRecommendationsRequest.seedArtists = [],
+          GetRecommendationsRequest.limit = 20
+        }
     )
 
 recommendationsForArtist :: T.Text -> Artist.Artist -> IO [Track.Track]
@@ -206,7 +202,7 @@ discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth 
 
   artistsWithTracks <- forM localArtists $ \artist -> do
     Jobs.yieldStatus $ "Getting tracks by " <> Artist.name artist
-    let knownTracks =  fromMaybe [] $ M.lookup (Artist.name artist) tracksByArtistName
+    let knownTracks = fromMaybe [] $ M.lookup (Artist.name artist) tracksByArtistName
     if length knownTracks >= 3
       then return (artist, take 3 knownTracks)
       else do
