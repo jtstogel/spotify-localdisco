@@ -9,7 +9,7 @@ module App
   )
 where
 
-import Control.Monad.Reader (ReaderT, runReaderT, ask, lift)
+import Control.Monad.Reader (ReaderT, runReaderT, asks, lift)
 import Data.Text (Text)
 import qualified Jobs
 import qualified Locations
@@ -31,8 +31,8 @@ type App = AppT IO
 
 runWithDB :: (MonadUnliftIO m) => Storage.DatabaseT m a -> AppT m a
 runWithDB action = do
-  handle <- dbHandle <$> ask
+  handle <- asks dbHandle
   lift $ Storage.runWithDB handle action
 
-runAppT :: (MonadUnliftIO m) => AppState -> AppT m a -> m a 
-runAppT state app = (runReaderT app) state
+runAppT :: AppState -> AppT m a -> m a
+runAppT state app = runReaderT app state
