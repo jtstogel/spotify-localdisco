@@ -1,10 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module HTTP
   ( QueryParam (..),
     get,
+    post,
   )
 where
 
@@ -79,3 +80,12 @@ getWithRetries retries request = do
 
 get :: (FromJSON r, Show r) => Request -> IO r
 get = getWithRetries 3
+
+post :: (FromJSON r, Show r) => Request -> IO r
+post request = do
+  response <- httpJSONEither (traceShowId request)
+  let code = getResponseStatusCode (traceShowId response)
+
+  if code /= 200
+    then throwErr (getResponseStatus response) "failed to post"
+    else eitherStatusIO status500 . mapLeft show . getResponseBody $ response

@@ -55,6 +55,7 @@ library
       Types.Spotify.Track
       Types.Spotify.UserProfile
       Types.SpotifyDiscovery
+      Types.SpotifyProfile
       Types.Ticketmaster.Attraction
       Types.Ticketmaster.Event
       Types.Ticketmaster.ListArtistsResponse
@@ -78,6 +79,7 @@ library
     , http-types
     , monad-coroutine
     , monad-logger
+    , monad-loops
     , mtl
     , persistent
     , persistent-sqlite
@@ -118,6 +120,7 @@ executable web-exe
     , http-types
     , monad-coroutine
     , monad-logger
+    , monad-loops
     , mtl
     , persistent
     , persistent-sqlite
@@ -165,6 +168,7 @@ test-suite spec
     , http-types
     , monad-coroutine
     , monad-logger
+    , monad-loops
     , mtl
     , persistent
     , persistent-sqlite

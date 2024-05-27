@@ -5,6 +5,7 @@
 
 module Types.Spotify.UserProfile
   ( UserProfile (..),
+    Image (..),
   )
 where
 
@@ -13,10 +14,21 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import qualified Types.Spotify.Track as Track
 
-data UserProfile = UserProfile
-  { user_id :: Text
+data Image = Image
+  { url :: Text
   }
   deriving (Generic, Show)
+
+data UserProfile = UserProfile
+  { id :: Text,
+    display_name :: Text,
+    images :: Maybe [Image]
+  }
+  deriving (Generic, Show)
+
+instance FromJSON Image
+
+instance ToJSON Image
 
 instance FromJSON UserProfile
 

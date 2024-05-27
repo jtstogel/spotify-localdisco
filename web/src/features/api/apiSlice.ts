@@ -1,15 +1,29 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 
+declare interface AuthenticateWithSpotifyRequest {
+    code: string
+    redirectUri: string
+}
+
+declare interface AuthenticateWithSpotifyResponse {
+    userId: string
+}
+
+declare interface SpotifyUserProfile {
+    displayName: string
+    profileImageUrl: string
+}
+
 declare interface GetClientIdResponse {
     clientId: string
 }
 
 declare interface CreatePlaylistJobRequest {
     postalCode: string
-    spotifyAccessToken: string
     radiusMiles: number
     days: number
     spideringDepth: number
+    authToken: string
 }
 
 declare interface CreatePlaylistJobResponse {
@@ -48,6 +62,10 @@ function baseUri(): string {
     return 'http://127.0.0.1:8080'
 }
 
+export function authorizationHeader(token: string) {
+    return { 'Authorization': `Bearer ${token}` };
+}
+
 export const apiSlice = createApi({
     baseQuery: fetchBaseQuery({
         baseUrl: baseUri(),
@@ -63,10 +81,24 @@ export const apiSlice = createApi({
             }),
             transformResponse: ({ clientId }: GetClientIdResponse) => clientId,
         }),
+        getSpotifyProfile: build.query<SpotifyUserProfile, string>({
+            query: (token) => ({
+                url: '/spotify/me',
+                headers: { ...authorizationHeader(token) },
+            }),
+        }),
+        authenticateWithSpotify: build.mutation<AuthenticateWithSpotifyResponse, AuthenticateWithSpotifyRequest>({
+            query: (body) => ({
+                url: '/spotify/authenticate',
+                method: 'POST',
+                body
+            }),
+        }),
         createPlaylistJob: build.mutation<CreatePlaylistJobResponse, CreatePlaylistJobRequest>({
             query: (body) => ({
                 url: '/discoveryJobs',
                 method: 'POST',
+                headers: { ...authorizationHeader(body.authToken) },
                 body
             })
         }),
@@ -79,4 +111,4 @@ export const apiSlice = createApi({
     }),
 })
 
-export const { useGetSpotifyClientIdQuery, useGetPlaylistJobQuery, useCreatePlaylistJobMutation } = apiSlice
+export const { useGetSpotifyClientIdQuery, useGetSpotifyProfileQuery, useAuthenticateWithSpotifyMutation, useGetPlaylistJobQuery, useCreatePlaylistJobMutation } = apiSlice

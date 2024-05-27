@@ -10,18 +10,20 @@ module Spotify
     listSavedTracks,
     getUserProfile,
     exchangeAuthCode,
+    refreshAuthToken,
   )
 where
 
 import Control.Concurrent (threadDelay)
 import Data.Aeson (FromJSON)
+import Data.ByteString (ByteString)
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
 import Debug.Trace (traceShowId)
 import GHC.Generics (Generic)
-import HTTP (get, queryParam)
+import HTTP (get, post, queryParam)
 import Network.HTTP.Conduit (urlEncodedBody)
 import Network.HTTP.Simple
   ( Query,
@@ -54,9 +56,16 @@ authURL = "https://accounts.spotify.com/api/token"
 exchangeAuthCode :: Text -> Text -> Text -> Text -> IO AuthenticateResponse.AuthenticateResponse
 exchangeAuthCode clientID clientSecret redirectUri code = do
   let requestBody = [("grant_type", "authorization_code"), ("code", encodeUtf8 code), ("redirect_uri", encodeUtf8 redirectUri)]
-  let requestWithHeaders = setRequestBasicAuth (encodeUtf8 clientID) (encodeUtf8 clientSecret) . urlEncodedBody requestBody . parseRequest_ $ authURL
-  response <- httpJSON requestWithHeaders :: IO (Response AuthenticateResponse.AuthenticateResponse)
-  return $ getResponseBody response
+  tokenExchange clientID clientSecret requestBody
+
+refreshAuthToken :: Text -> Text -> Text -> IO AuthenticateResponse.AuthenticateResponse
+refreshAuthToken clientID clientSecret refreshToken = do
+  let requestBody = [("grant_type", "refresh_token"), ("refresh_token", encodeUtf8 refreshToken), ("client_id", encodeUtf8 clientID)]
+  tokenExchange clientID clientSecret requestBody
+
+tokenExchange :: (FromJSON r, Show r) => Text -> Text -> [(ByteString, ByteString)] -> IO r
+tokenExchange clientID clientSecret body = do
+  post $ setRequestBasicAuth (encodeUtf8 clientID) (encodeUtf8 clientSecret) . urlEncodedBody body . parseRequest_ $ authURL
 
 removeNothings :: Query -> Query
 removeNothings = filter (isJust . snd)

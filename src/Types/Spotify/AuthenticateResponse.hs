@@ -9,14 +9,15 @@ module Types.Spotify.AuthenticateResponse
 where
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import qualified Types.Spotify.Track as Track
 
 data AuthenticateResponse = AuthenticateResponse
-  { access_token :: String,
-    refresh_token :: String,
+  { access_token :: Text,
+    refresh_token :: Maybe Text,
     expires_in :: Int,
-    scope :: String
+    scope :: Text
   }
   deriving (Generic, Show)
 

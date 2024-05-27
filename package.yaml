@@ -35,6 +35,7 @@ dependencies:
 - http-conduit
 - http-types
 - monad-coroutine
+- monad-loops
 - unliftio-core
 - mtl
 - scotty

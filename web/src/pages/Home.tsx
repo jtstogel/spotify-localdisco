@@ -1,7 +1,7 @@
 import "./Home.css"
 import { FormEvent, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { selectAuthTokens } from "../features/spotify/spotifySlice"
+import { selectAuthToken } from "../features/spotify/spotifySlice"
 import { useAppSelector } from "../app/hooks"
 import { useCreatePlaylistJobMutation, useGetPlaylistJobQuery } from "../features/api/apiSlice"
 
@@ -52,7 +52,7 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
 }
 
 const Home = () => {
-  const authTokens = useAppSelector(selectAuthTokens);
+  const authToken = useAppSelector(selectAuthToken);
   const [createPlaylistJob, { data: response }] = useCreatePlaylistJobMutation()
   const navigate = useNavigate();
   const [postalCode, setPostalCode] = useState('94110');
@@ -60,7 +60,7 @@ const Home = () => {
   const [days, setDays] = useState('120');
   const [spideringDepth, setSpideringDepth] = useState('20');
 
-  if (!authTokens?.accessToken) {
+  if (!authToken) {
     useEffect(() => navigate('/spotify/login'));
     return <></>
   }
@@ -68,13 +68,12 @@ const Home = () => {
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
     console.log(event, postalCode, radiusMiles, days)
-    const spotifyAccessToken = authTokens?.accessToken!;
     createPlaylistJob({
       radiusMiles: radiusMiles ? Number(radiusMiles) : 10,
       days: days ? Number(days) : 30,
       spideringDepth: spideringDepth ? Number(spideringDepth) : 1,
       postalCode,
-      spotifyAccessToken,
+      authToken,
     })
   }
 

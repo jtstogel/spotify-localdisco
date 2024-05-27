@@ -26,7 +26,8 @@ module Storage
     getDiscoUserBySpotifyId,
     getSpotifyUserAuth,
     upsertSpotifyUserAuth,
-    getSpotifyUserAuthByUserId,
+    getSpotifyUserAuthByUser,
+    deleteSpotifyUserAuthByUser
   )
 where
 
@@ -35,9 +36,10 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Logger (NoLoggingT (runNoLoggingT))
 import Control.Monad.Trans.Class (MonadTrans (..))
 import Control.Monad.Trans.Reader (ReaderT)
+import Data.Foldable (forM_)
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
-import Database.Persist.Sqlite (ConnectionPool, Entity (..), SqlBackend, createSqlitePool, getBy, insert_, replace, runMigration, runSqlPool)
+import Database.Persist.Sqlite (ConnectionPool, Entity (..), SqlBackend, createSqlitePool, delete, getBy, insert_, replace, runMigration, runSqlPool)
 import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 
 share
@@ -57,6 +59,7 @@ SpotifyUserAuth
     accessToken Text
     refreshToken Text
     expireTime UTCTime
+    refreshing Bool
 |]
 
 newtype DatabaseT m a = DatabaseT {runDatabaseT :: ReaderT SqlBackend m a}
@@ -118,13 +121,15 @@ getDiscoUserBySpotifyId spotifyId = DatabaseT $ do
   user <- getBy (UniqueSpotifyId spotifyId)
   return $ entityVal <$> user
 
--- Inserts an auth token.
 getSpotifyUserAuthByUserId :: (MonadUnliftIO m) => Text -> DatabaseT m (Maybe SpotifyUserAuth)
 getSpotifyUserAuthByUserId userId = do
   maybeUser <- getDiscoUser userId
   case discoUserSpotifyId <$> maybeUser of
     Just spotifyId -> getSpotifyUserAuth spotifyId
     Nothing -> return Nothing
+
+getSpotifyUserAuthByUser :: (MonadUnliftIO m) => DiscoUser -> DatabaseT m (Maybe SpotifyUserAuth)
+getSpotifyUserAuthByUser user = getSpotifyUserAuthByUserId $ discoUserUuid user
 
 getSpotifyUserAuth :: (MonadUnliftIO m) => Text -> DatabaseT m (Maybe SpotifyUserAuth)
 getSpotifyUserAuth spotifyUserId = DatabaseT $ do
@@ -137,3 +142,8 @@ upsertSpotifyUserAuth auth = DatabaseT $ do
   case existingAuth of
     Just entity -> replace (entityKey entity) auth
     Nothing -> insert_ auth
+
+deleteSpotifyUserAuthByUser :: (MonadUnliftIO m) => DiscoUser -> DatabaseT m ()
+deleteSpotifyUserAuthByUser user = DatabaseT $ do
+  maybeAuth <- getBy (UniqueSpotifyUserAuth . discoUserSpotifyId $ user)
+  forM_ maybeAuth (delete . entityKey)

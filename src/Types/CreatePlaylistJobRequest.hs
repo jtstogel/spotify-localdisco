@@ -10,8 +10,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 
 data CreatePlaylistJobRequest = CreatePlaylistJobRequest
-  { spotifyAccessToken :: !Text,
-    postalCode :: !Text,
+  { postalCode :: !Text,
     radiusMiles :: !Int,
     days :: !Int,
     spideringDepth :: !Int

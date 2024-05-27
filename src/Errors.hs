@@ -4,6 +4,7 @@ module Errors
     mapLeft,
     eitherStatusIO,
     eitherIO,
+    maybeStatusIO,
     maybeIO,
     ErrStatus (..),
   )
@@ -34,6 +35,9 @@ eitherStatusIO code = either throwIO return . mapLeft (ErrStatus code)
 
 eitherIO :: Either String b -> IO b
 eitherIO = eitherStatusIO status500
+
+maybeStatusIO :: Status -> String -> Maybe a -> IO a
+maybeStatusIO s nothingMessage = eitherStatusIO s . eitherFromMaybe nothingMessage
 
 maybeIO :: String -> Maybe a -> IO a
 maybeIO nothingMessage = eitherIO . eitherFromMaybe nothingMessage

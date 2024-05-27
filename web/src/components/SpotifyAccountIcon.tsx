@@ -1,20 +1,19 @@
 import './SpotifyAccountIcon.css'
 import { useAppSelector } from '../app/hooks'
-import { useGetMyProfileQuery } from '../features/spotify/spotifyApiSlice';
-import type { SpotifyAuthToken } from '../features/spotify/spotifyAccountsApiSlice';
-import { selectAuthTokens } from '../features/spotify/spotifySlice';
+import { selectAuthToken } from '../features/spotify/spotifySlice';
+import { useGetSpotifyProfileQuery } from '../features/api/apiSlice';
 
 const SpotifyAccountIcon = () => {
-    const authTokens = useAppSelector(selectAuthTokens);
-    if (!authTokens) {
+    const authToken = useAppSelector(selectAuthToken);
+    if (!authToken) {
         return <></>
     }
-    return <LoggedInSpotifyIcon authTokens={authTokens} />
+    return <LoggedInSpotifyIcon token={authToken} />
 };
 
-const LoggedInSpotifyIcon = ({ authTokens }: { authTokens: SpotifyAuthToken }) => {
-    const { data: profile, isLoading, error } = useGetMyProfileQuery(authTokens);
-    if (!authTokens) {
+const LoggedInSpotifyIcon = ({ token }: { token: string }) => {
+    const { data: profile, isLoading, error } = useGetSpotifyProfileQuery(token);
+    if (!token) {
         return (<div>not logged in</div>)
     }
 
@@ -22,11 +21,10 @@ const LoggedInSpotifyIcon = ({ authTokens }: { authTokens: SpotifyAuthToken }) =
     if (error) {
         return (<div>authentication failed!</div>)
     }
-    const imageUrl = profile?.images?.[0]?.url;
 
     return (
         <div>
-            <img className="profile-image" alt="spotify profile" src={imageUrl}></img>
+            <img className="profile-image" alt="spotify profile" src={profile?.profileImageUrl}></img>
         </div>
     )
 };
