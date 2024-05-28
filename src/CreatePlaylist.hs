@@ -175,8 +175,8 @@ intervals (start, end) maxDuration
   | otherwise = [(start, end)]
   where maxEndTime = addUTCTime maxDuration start
 
-discoverSpotify :: App.AppState -> T.Text -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
-discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth = do
+discoverSpotify :: App.AppState -> T.Text -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> T.Text -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
+discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth playlistName = do
   Jobs.yieldStatus "Finding local events"
   -- You're only allowed to get 1000 events from the Ticketmaster API..
   -- So break up the search requests into 3 week chunks.
@@ -228,8 +228,8 @@ discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth 
     lift $
       Spotify.createPlaylist spotifyAuth spotifyUserId $
         CreatePlaylistRequest.CreatePlaylistRequest
-          { CreatePlaylistRequest.name = "Local Disco",
-            CreatePlaylistRequest.description = "Artists playing near you",
+          { CreatePlaylistRequest.name = playlistName,
+            CreatePlaylistRequest.description = "Made by Local Disco. Exclude this playlist from taste profile to avoid messing up future recs.",
             CreatePlaylistRequest.public = False
           }
   let playlistId = CreatePlaylistResponse.id playlistResponse

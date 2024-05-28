@@ -18,7 +18,8 @@ import Data.Text (Text, stripPrefix)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text.Lazy as LazyText
-import Data.Time.Clock (NominalDiffTime, UTCTime (UTCTime), addUTCTime, getCurrentTime, nominalDay)
+import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime, nominalDay)
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUIDV4
@@ -155,6 +156,21 @@ getTopTracks = do
   tracks <- liftIO $ CreatePlaylist.getTopTracks auth limit
   lift $ S.json tracks
 
+mkPlaylistName :: Text -> UTCTime -> UTCTime -> Text
+mkPlaylistName placeName start end = "Concerts near " <> placeName <> ", " <> dateRange
+  where
+    month = T.pack . formatTime defaultTimeLocale "%b"
+    year = T.pack . formatTime defaultTimeLocale "%Y"
+    sameMonth = month start /= month end
+    sameYear = year start == year end
+    dateRange
+      -- Jan 2024
+      | sameMonth && sameYear = month end <> " " <> year end
+      -- Jan-Aug 2024
+      | not sameMonth && sameYear = month start <> "-" <> month end <> " " <> year end
+      -- Nov 2024 - Feb 2025
+      | otherwise = month start <> " " <> year start <> " - " <> month end <> " " <> year end
+
 createDiscoveryJob :: App.AppT ActionM ()
 createDiscoveryJob = do
   user <- getAuthenticatedUserOrFail
@@ -169,6 +185,9 @@ createDiscoveryJob = do
 
   postalCodeLookup <- App.postalCodeLookup <$> ask
   geoHash <- liftIO $ eitherStatusIO status404 $ Locations.lookupGeoHash postalCodeLookup postalCode
+
+  placeName <- liftIO $ eitherStatusIO status404 $ Locations.lookupPlaceName postalCodeLookup postalCode
+  let playlistName = mkPlaylistName placeName startTime endTime
 
   uuid <- liftIO . fmap UUID.toText $ UUIDV4.nextRandom
   let jobName = "discoveryJobs/" <> uuid
@@ -185,7 +204,7 @@ createDiscoveryJob = do
           }
 
   appState <- ask
-  let discoveryCoroutine = CreatePlaylist.discoverSpotify appState auth (Storage.discoUserSpotifyId user) eventsReq spideringDepth
+  let discoveryCoroutine = CreatePlaylist.discoverSpotify appState auth (Storage.discoUserSpotifyId user) eventsReq spideringDepth playlistName
   _ <- liftIO $ Jobs.runJob (App.jobsDB appState) jobName discoveryCoroutine
 
   lift . S.json $ object ["name" .= jobName]
