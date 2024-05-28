@@ -161,7 +161,7 @@ mkPlaylistName placeName start end = "Concerts near " <> placeName <> ", " <> da
   where
     month = T.pack . formatTime defaultTimeLocale "%b"
     year = T.pack . formatTime defaultTimeLocale "%Y"
-    sameMonth = month start /= month end
+    sameMonth = month start == month end
     sameYear = year start == year end
     dateRange
       -- Jan 2024
