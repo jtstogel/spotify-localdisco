@@ -77,7 +77,7 @@ loadPostalCodeLookup filename = do
 handleException :: ErrStatus -> ActionM ()
 handleException (ErrStatus s msg) = do
   S.status s
-  S.text . LazyText.fromStrict $ T.pack msg <> ": " <> decodeUtf8 (statusMessage s)
+  S.json $ object ["error" .= (T.pack msg <> ": " <> decodeUtf8 (statusMessage s))]
 
 getSpotifyClientId :: App.AppT ActionM ()
 getSpotifyClientId = do

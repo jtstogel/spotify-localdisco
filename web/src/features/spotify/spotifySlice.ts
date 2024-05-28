@@ -47,8 +47,8 @@ export const spotifySlice = createAppSlice({
         );
         builder.addMatcher(
             apiSlice.endpoints.getSpotifyProfile.matchRejected,
-            (state, { payload }) => {
-                if (payload?.status === 'FETCH_ERROR') {
+            (state, err) => {
+                if (err.payload?.status === 403) {
                     state.discoUserId = undefined;
                 }
             },

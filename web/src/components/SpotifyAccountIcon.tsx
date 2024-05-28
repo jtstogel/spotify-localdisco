@@ -2,6 +2,7 @@ import './SpotifyAccountIcon.css'
 import { useAppSelector } from '../app/hooks'
 import { selectAuthToken } from '../features/spotify/spotifySlice';
 import { useGetSpotifyProfileQuery } from '../features/api/apiSlice';
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
 const SpotifyAccountIcon = () => {
     const authToken = useAppSelector(selectAuthToken);

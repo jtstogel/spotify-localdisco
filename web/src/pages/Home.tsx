@@ -80,8 +80,13 @@ const Home = () => {
   const [endDate, setEndDate] = useState(dateString(new Date(new Date().getTime() + 120 * 24 * 60 * 60 * 1000)));
   const [newMusic, setNewMusic] = useState(NewMusic.SOME);
 
+  useEffect(() => {
+    if (!authToken) {
+      navigate('/spotify/login');
+    }
+  }, [authToken, navigate]);
+
   if (!authToken) {
-    useEffect(() => navigate('/spotify/login'));
     return <></>
   }
 
