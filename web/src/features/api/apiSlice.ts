@@ -21,7 +21,8 @@ declare interface GetClientIdResponse {
 declare interface CreatePlaylistJobRequest {
     postalCode: string
     radiusMiles: number
-    days: number
+    startTime: string
+    endTime: string
     spideringDepth: number
     authToken: string
 }
