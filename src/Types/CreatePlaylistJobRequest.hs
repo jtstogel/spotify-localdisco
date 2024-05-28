@@ -12,7 +12,8 @@ import GHC.Generics (Generic)
 data CreatePlaylistJobRequest = CreatePlaylistJobRequest
   { postalCode :: !Text,
     radiusMiles :: !Int,
-    days :: !Int,
+    startTime :: !String,  -- in ISO8601 format
+    endTime :: !String,  -- in ISO8601 format
     spideringDepth :: !Int
   }
   deriving (Generic)

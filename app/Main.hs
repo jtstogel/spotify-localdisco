@@ -13,20 +13,22 @@ import qualified CreatePlaylist
 import Data.Aeson (KeyValue ((.=)), eitherDecode, object)
 import qualified Data.ByteString.Lazy as B
 import Data.List (find)
-import Data.Maybe (fromMaybe, isNothing, fromJust)
+import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Data.Text (Text, stripPrefix)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text.Lazy as LazyText
-import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime, nominalDay)
+import Data.Time.Clock (NominalDiffTime, UTCTime (UTCTime), addUTCTime, getCurrentTime, nominalDay)
+import Data.Time.Format.ISO8601 (iso8601ParseM)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUIDV4
+import Debug.Trace
 import Env (Env (spotifyClientID))
 import qualified Env
 import Errors (ErrStatus (..), eitherIO, eitherStatusIO, maybeIO, maybeStatusIO, throwErr)
 import qualified Jobs
 import qualified Locations
-import Network.HTTP.Types.Status (Status (statusMessage), status403, status404, status500)
+import Network.HTTP.Types.Status (Status (statusMessage), status400, status403, status404, status500)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import qualified Spotify
@@ -44,7 +46,6 @@ import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import Web.Scotty (ActionM)
 import qualified Web.Scotty as S
-import Debug.Trace
 
 main :: IO ()
 main = do
@@ -160,15 +161,14 @@ createDiscoveryJob = do
   auth <- getSpotifyAccessToken user
 
   request <- lift S.jsonData :: App.AppT ActionM CreatePlaylistJobRequest.CreatePlaylistJobRequest
-  let days = CreatePlaylistJobRequest.days request
+  startTime <- liftIO $ maybeStatusIO status400 "failed to parse startTime" $ (iso8601ParseM $ CreatePlaylistJobRequest.startTime request :: Maybe UTCTime)
+  endTime <- liftIO $ maybeStatusIO status400 "failed to parse startTime" $ (iso8601ParseM $ CreatePlaylistJobRequest.endTime request :: Maybe UTCTime)
   let postalCode = CreatePlaylistJobRequest.postalCode request
   let radiusMiles = CreatePlaylistJobRequest.radiusMiles request
   let spideringDepth = CreatePlaylistJobRequest.spideringDepth request
 
   postalCodeLookup <- App.postalCodeLookup <$> ask
   geoHash <- liftIO $ eitherStatusIO status404 $ Locations.lookupGeoHash postalCodeLookup postalCode
-  startTime <- liftIO getCurrentTime
-  let endTime = addUTCTime (fromIntegral days * nominalDay) startTime
 
   uuid <- liftIO . fmap UUID.toText $ UUIDV4.nextRandom
   let jobName = "discoveryJobs/" <> uuid
@@ -223,7 +223,8 @@ saveSpotifyAuth spotifyUserId authResponse = do
   now <- liftIO getCurrentTime
   let authExpireTime = addUTCTime (fromIntegral . SpotifyAuthenticateResponse.expires_in $ authResponse) now
   when (isNothing . SpotifyAuthenticateResponse.refresh_token $ authResponse) $
-    liftIO $ throwErr status500 "didn't get a refresh token from spotify"
+    liftIO $
+      throwErr status500 "didn't get a refresh token from spotify"
 
   Storage.upsertSpotifyUserAuth
     Storage.SpotifyUserAuth
@@ -299,13 +300,13 @@ getSpotifyAccessToken user = do
       clientSecret <- asks App.spotifyClientSecret
       let refreshToken = Storage.spotifyUserAuthRefreshToken auth
       authResponse <- liftIO $ Spotify.refreshAuthToken clientId clientSecret refreshToken
-      let authResponseWithRefreshToken = authResponse { SpotifyAuthenticateResponse.refresh_token = Just refreshToken }
+      let authResponseWithRefreshToken = authResponse {SpotifyAuthenticateResponse.refresh_token = Just refreshToken}
       _ <- App.runWithDB $ saveSpotifyAuth (Storage.discoUserSpotifyId user) authResponseWithRefreshToken
       return $ SpotifyAuthenticateResponse.access_token authResponse
 
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
-maybeHead (x:_) = Just x
+maybeHead (x : _) = Just x
 
 getSpotifyProfile :: App.AppT ActionM ()
 getSpotifyProfile = do
