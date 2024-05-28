@@ -2,8 +2,6 @@ import type { Action, ThunkAction } from "@reduxjs/toolkit"
 import { combineSlices, configureStore } from "@reduxjs/toolkit"
 import { setupListeners } from "@reduxjs/toolkit/query"
 import { spotifySlice } from "../features/spotify/spotifySlice"
-import { spotifyAccountsApiSlice } from "../features/spotify/spotifyAccountsApiSlice"
-import { spotifyApiSlice } from "../features/spotify/spotifyApiSlice"
 import { apiSlice } from '../features/api/apiSlice'
 
 function withDebounce(f: () => void, debounceMs: number) {
@@ -24,12 +22,17 @@ export const saveStore = () => {
 }
 
 const loadStore = () => {
-  return JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') ?? undefined
+  const store = JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') ?? undefined
+  // Only load the spotifySlice; we want to avoid loading API slices here
+  // because they'll include information about pending requests.
+  return {
+    [spotifySlice.name]: store[spotifySlice.name]
+  }
 };
 
 // `combineSlices` automatically combines the reducers using
 // their `reducerPath`s, therefore we no longer need to call `combineReducers`.
-const rootReducer = combineSlices(apiSlice, spotifySlice, spotifyApiSlice, spotifyAccountsApiSlice)
+const rootReducer = combineSlices(apiSlice, spotifySlice)
 // Infer the `RootState` type from the root reducer
 export type RootState = ReturnType<typeof rootReducer>
 
@@ -42,8 +45,6 @@ export const makeStore = (preloadedState?: Partial<RootState>) => {
     // and other useful features of `rtk-query`.
     middleware: getDefaultMiddleware => {
       return getDefaultMiddleware()
-        .concat(spotifyAccountsApiSlice.middleware)
-        .concat(spotifyApiSlice.middleware)
         .concat(apiSlice.middleware)
     },
     preloadedState,

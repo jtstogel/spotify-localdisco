@@ -74,7 +74,7 @@ export const apiSlice = createApi({
         mode: 'cors',
     }),
     reducerPath: "api",
-    keepUnusedDataFor: 5 * 60 * 60,
+    keepUnusedDataFor: 60,
     tagTypes: ["Api"],
     endpoints: build => ({
         getSpotifyClientId: build.query<string, void>({

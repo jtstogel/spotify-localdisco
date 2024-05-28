@@ -45,6 +45,14 @@ export const spotifySlice = createAppSlice({
                 state.discoUserId = payload.userId
             },
         );
+        builder.addMatcher(
+            apiSlice.endpoints.getSpotifyProfile.matchRejected,
+            (state, { payload }) => {
+                if (payload?.status === 'FETCH_ERROR') {
+                    state.discoUserId = undefined;
+                }
+            },
+        );
     },
     selectors: {
         selectClientId: state => state.clientId,
