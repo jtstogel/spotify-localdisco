@@ -23,6 +23,8 @@ export const saveStore = () => {
 
 const loadStore = () => {
   const store = JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') ?? undefined
+  if (!store) return store
+
   // Only load the spotifySlice; we want to avoid loading API slices here
   // because they'll include information about pending requests.
   return {
