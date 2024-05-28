@@ -26,7 +26,6 @@ export async function redirectToSpotifyOAuth2(args: SpotifyOAuthParams) {
         ["client_id", args.clientId],
         ["scope", SPOTIFY_OAUTH_SCOPE],
         ["redirect_uri", redirectUri],
-        ["show_dialog", "true"],
     ]).toString()
     window.location.href = authUrl.toString()
 }
