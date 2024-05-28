@@ -229,7 +229,7 @@ discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth 
       Spotify.createPlaylist spotifyAuth spotifyUserId $
         CreatePlaylistRequest.CreatePlaylistRequest
           { CreatePlaylistRequest.name = playlistName,
-            CreatePlaylistRequest.description = "Made by Local Disco. Exclude this playlist from taste profile to avoid messing up future recs.",
+            CreatePlaylistRequest.description = "Exclude this playlist from your taste profile to avoid messing up future recs.",
             CreatePlaylistRequest.public = False
           }
   let playlistId = CreatePlaylistResponse.id playlistResponse
