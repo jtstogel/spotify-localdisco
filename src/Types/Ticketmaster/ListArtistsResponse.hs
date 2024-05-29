@@ -14,6 +14,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import qualified Types.Ticketmaster.Attraction as Attraction
 import qualified Types.Ticketmaster.Event as Event
+import Data.Maybe (mapMaybe)
 
 data ListArtistsResponse = ListArtistsResponse
   { nextPageToken :: Maybe Text,
@@ -24,7 +25,7 @@ data ListArtistsResponse = ListArtistsResponse
 instance ToJSON ListArtistsResponse
 
 attractionNamesFromEvent :: Event.Event -> [Text]
-attractionNamesFromEvent = maybe [] (map Attraction.name) . Event.attractions . Event._embedded
+attractionNamesFromEvent = maybe [] (mapMaybe Attraction.name) . Event.attractions . Event._embedded
 
 fromEvents :: [Event.Event] -> ListArtistsResponse
 fromEvents r =

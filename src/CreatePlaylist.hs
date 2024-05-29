@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -7,6 +8,7 @@ module CreatePlaylist
     getTopTracks,
     searchEvents,
     recommendationsForTrack,
+    SpotifyTermDuration (..),
   )
 where
 
@@ -16,8 +18,9 @@ import Control.Monad.Trans.Class (lift)
 import Data.List (foldl', nub, nubBy, sort)
 import qualified Data.Map as M
 import Data.Map.Strict (insertWith)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Text as T
+import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import qualified Jobs
 import qualified Spotify
 import qualified Ticketmaster
@@ -43,7 +46,6 @@ import qualified Types.Ticketmaster.Event as Event
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import qualified Types.Ticketmaster.SearchEventsResponse as SearchEventsResponse
 import Utils (chunks)
-import Data.Time (UTCTime, NominalDiffTime, addUTCTime)
 
 -- Gets n items from a List API.
 listN :: (Monad m) => (req -> m res) -> (req -> res -> Maybe req) -> (res -> [item]) -> req -> Int -> m [item]
@@ -60,16 +62,24 @@ listN list makeNextRequest getItems req n = do
         remaining <- listN list makeNextRequest getItems nextReq (n - count)
         return $ items ++ remaining
 
-initialTopItemsRequest :: ListTopItemsRequest.ListTopItemsRequest
-initialTopItemsRequest =
+data SpotifyTermDuration = LongTerm | MediumTerm | ShortTerm
+
+instance Show SpotifyTermDuration where
+  show :: SpotifyTermDuration -> String
+  show LongTerm = "long_term"
+  show MediumTerm = "medium_term"
+  show ShortTerm = "short_term"
+
+initialTopItemsRequest :: SpotifyTermDuration -> ListTopItemsRequest.ListTopItemsRequest
+initialTopItemsRequest term =
   ListTopItemsRequest.ListTopItemsRequest
-    { ListTopItemsRequest.timeRange = Just "medium_term",
+    { ListTopItemsRequest.timeRange = Just . T.pack $ show term,
       ListTopItemsRequest.offset = Just 0,
       ListTopItemsRequest.limit = Just 50
     }
 
-getTopArtists :: T.Text -> Int -> IO [Artist.Artist]
-getTopArtists auth = listN (Spotify.listTopArtists auth) makeNextRequest getItems initialTopItemsRequest
+getTopArtists :: T.Text -> SpotifyTermDuration -> Int -> IO [Artist.Artist]
+getTopArtists auth term = listN (Spotify.listTopArtists auth) makeNextRequest getItems (initialTopItemsRequest term)
   where
     getItems = fromMaybe [] . TopArtistsResponse.items
     makeNextRequest req res = do
@@ -78,8 +88,8 @@ getTopArtists auth = listN (Spotify.listTopArtists auth) makeNextRequest getItem
       let offset = fromMaybe 0 $ TopArtistsResponse.offset res
       Just $ req {ListTopItemsRequest.offset = Just $ count + offset}
 
-getTopTracks :: T.Text -> Int -> IO [Track.Track]
-getTopTracks auth = listN (Spotify.listTopTracks auth) makeNextRequest getItems initialTopItemsRequest
+getTopTracks :: T.Text -> SpotifyTermDuration -> Int -> IO [Track.Track]
+getTopTracks auth term = listN (Spotify.listTopTracks auth) makeNextRequest getItems (initialTopItemsRequest term)
   where
     getItems = fromMaybe [] . TopTracksResponse.items
     makeNextRequest req res = do
@@ -161,7 +171,7 @@ searchEvents auth = listN (Ticketmaster.searchEvents auth) makeNextRequest getIt
         else Just $ req {SearchEventsRequest.pageNumber = pageNumber + 1}
 
 attractionNamesFromEvent :: Event.Event -> [T.Text]
-attractionNamesFromEvent = maybe [] (map Attraction.name) . Event.attractions . Event._embedded
+attractionNamesFromEvent = maybe [] (mapMaybe Attraction.name) . Event.attractions . Event._embedded
 
 repeatedMap :: (Ord k) => [(k, v)] -> M.Map k [v]
 repeatedMap = foldl' (\m (k, v) -> insertWith (++) k [v] m) M.empty
@@ -173,7 +183,8 @@ intervals :: (UTCTime, UTCTime) -> NominalDiffTime -> [(UTCTime, UTCTime)]
 intervals (start, end) maxDuration
   | maxEndTime < end = (start, maxEndTime) : intervals (maxEndTime, end) maxDuration
   | otherwise = [(start, end)]
-  where maxEndTime = addUTCTime maxDuration start
+  where
+    maxEndTime = addUTCTime maxDuration start
 
 discoverSpotify :: App.AppState -> T.Text -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> T.Text -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
 discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth playlistName = do
@@ -184,21 +195,29 @@ discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth 
   let eventEndTime = SearchEventsRequest.endTime eventsRequest
   let maxInterval = fromInteger (3 * 7 * 24 * 60 * 60) :: NominalDiffTime
   eventResponses <- forM (intervals (eventStartTime, eventEndTime) maxInterval) $ \(start, end) -> do
-    let req = eventsRequest { SearchEventsRequest.startTime = start, SearchEventsRequest.endTime = end }
+    let req = eventsRequest {SearchEventsRequest.startTime = start, SearchEventsRequest.endTime = end}
     lift $ searchEvents (App.ticketmasterConsumerKey appState) req 1000
   let events = concat eventResponses
 
   Jobs.yieldStatus "Getting your top artists"
-  topArtists <- lift $ getTopArtists spotifyAuth 1000
+  topArtists <- lift $ do
+    long <- getTopArtists spotifyAuth LongTerm 1000
+    medium <- getTopArtists spotifyAuth MediumTerm 1000
+    short <- getTopArtists spotifyAuth ShortTerm 1000
+    return $ long ++ medium ++ short
 
   Jobs.yieldStatus "Getting your top tracks"
-  topTracks <- lift $ getTopTracks spotifyAuth 1000
+  topTracks <- lift $ do
+    long <- getTopTracks spotifyAuth LongTerm 1000
+    medium <- getTopTracks spotifyAuth MediumTerm 1000
+    short <- getTopTracks spotifyAuth ShortTerm 1000
+    return $ long ++ medium ++ short
 
   Jobs.yieldStatus "Getting your followed artists"
-  followedArtists <- lift $ getFollowedArtists spotifyAuth 1000
+  followedArtists <- lift $ getFollowedArtists spotifyAuth 5000
 
   Jobs.yieldStatus "Getting your saved tracks"
-  savedTracks <- lift $ getSavedTracks spotifyAuth 1000
+  savedTracks <- lift $ getSavedTracks spotifyAuth 5000
 
   Jobs.yieldStatus "Finding some new music based on your top tracks"
   tracksFromTopTracks <- lift $ mapM (recommendationsForTrack spotifyAuth) (take spideringDepth topTracks)
@@ -221,7 +240,9 @@ discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth 
       then return (artist, take 3 knownTracks)
       else do
         response <- lift $ Spotify.artistTopTracks spotifyAuth $ GetArtistTopTracksRequest.GetArtistTopTracksRequest {GetArtistTopTracksRequest.artistId = Artist.id artist}
-        return (artist, take 3 $ GetArtistTopTracksResponse.tracks response)
+        -- Prefer the tracks that Spotify recommended.
+        let allTracks = nubUsing Track.id $ knownTracks ++ GetArtistTopTracksResponse.tracks response
+        return (artist, take 3 allTracks)
 
   Jobs.yieldStatus "Creating your playlist"
   playlistResponse <-
@@ -242,5 +263,7 @@ discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth 
   return $
     SpotifyDiscovery.SpotifyDiscovery
       { SpotifyDiscovery.playlistLink = CreatePlaylistResponse.spotify $ CreatePlaylistResponse.external_urls playlistResponse,
-        SpotifyDiscovery.artists = map (Artist.name . fst) artistsWithTracks
+        SpotifyDiscovery.artists = map (Artist.name . fst) artistsWithTracks,
+        SpotifyDiscovery.spotifyArtists = map Artist.name artists,
+        SpotifyDiscovery.ticketmasterArtists = ticketmasterArtists
       }

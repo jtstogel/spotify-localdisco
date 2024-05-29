@@ -11,7 +11,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 
 data Attraction = Attraction
-  { name :: Text,
+  { name :: Maybe Text,
     id :: Text
   }
   deriving (Generic, Show)

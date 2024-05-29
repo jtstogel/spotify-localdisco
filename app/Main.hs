@@ -146,14 +146,14 @@ getTopArtists :: App.AppT ActionM ()
 getTopArtists = do
   auth <- lift (S.queryParam "spotifyAccessToken" :: ActionM Text)
   limit <- lift (S.queryParam "limit" :: ActionM Int)
-  artists <- liftIO $ CreatePlaylist.getTopArtists auth limit
+  artists <- liftIO $ CreatePlaylist.getTopArtists auth CreatePlaylist.MediumTerm limit
   lift $ S.json artists
 
 getTopTracks :: App.AppT ActionM ()
 getTopTracks = do
   auth <- lift (S.queryParam "spotifyAccessToken" :: ActionM Text)
   limit <- lift (S.queryParam "limit" :: ActionM Int)
-  tracks <- liftIO $ CreatePlaylist.getTopTracks auth limit
+  tracks <- liftIO $ CreatePlaylist.getTopTracks auth CreatePlaylist.MediumTerm limit
   lift $ S.json tracks
 
 mkPlaylistName :: Text -> UTCTime -> UTCTime -> Text
