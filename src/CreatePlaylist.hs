@@ -186,19 +186,8 @@ intervals (start, end) maxDuration
   where
     maxEndTime = addUTCTime maxDuration start
 
-discoverSpotify :: App.AppState -> T.Text -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> T.Text -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
-discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth playlistName = do
-  Jobs.yieldStatus "Finding local events"
-  -- You're only allowed to get 1000 events from the Ticketmaster API..
-  -- So break up the search requests into 3 week chunks.
-  let eventStartTime = SearchEventsRequest.startTime eventsRequest
-  let eventEndTime = SearchEventsRequest.endTime eventsRequest
-  let maxInterval = fromInteger (3 * 7 * 24 * 60 * 60) :: NominalDiffTime
-  eventResponses <- forM (intervals (eventStartTime, eventEndTime) maxInterval) $ \(start, end) -> do
-    let req = eventsRequest {SearchEventsRequest.startTime = start, SearchEventsRequest.endTime = end}
-    lift $ searchEvents (App.ticketmasterConsumerKey appState) req 1000
-  let events = concat eventResponses
-
+findSpotifyArtists :: T.Text -> Int -> Jobs.Job ([Artist.Artist], M.Map T.Text [Track.Track])
+findSpotifyArtists spotifyAuth spideringDepth = do
   Jobs.yieldStatus "Getting your top artists"
   topArtists <- lift $ do
     long <- getTopArtists spotifyAuth LongTerm 1000
@@ -227,23 +216,26 @@ discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth 
 
   let tracks = nubUsing Track.id $ topTracks ++ savedTracks ++ concat tracksFromTopTracks ++ concat tracksFromTopArtists
   let artists = nubUsing Artist.id $ topArtists ++ followedArtists ++ concatMap (fromMaybe [] . Track.artists) tracks
+  let tracksByArtistId = repeatedMap $ concatMap (\t -> maybe [] (map (\a -> (Artist.id a, t))) (Track.artists t)) tracks :: M.Map T.Text [Track.Track]
 
-  let ticketmasterArtists = nub . sort . concatMap attractionNamesFromEvent $ events
+  return (artists, tracksByArtistId)
 
-  let localArtists = filter (\a -> Artist.name a `elem` ticketmasterArtists) artists
-  let tracksByArtistName = repeatedMap $ concatMap (\t -> maybe [] (map (\a -> (Artist.name a, t))) (Track.artists t)) tracks :: M.Map T.Text [Track.Track]
+findTicketmasterEvents :: App.AppState -> SearchEventsRequest.SearchEventsRequest -> Jobs.Job [Event.Event]
+findTicketmasterEvents appState eventsRequest = do
+  Jobs.yieldStatus "Finding local events"
+  -- You're only allowed to get 1000 events from the Ticketmaster API..
+  -- So break up the search requests into 3 week chunks.
+  let eventStartTime = SearchEventsRequest.startTime eventsRequest
+  let eventEndTime = SearchEventsRequest.endTime eventsRequest
+  let maxInterval = fromInteger (3 * 7 * 24 * 60 * 60) :: NominalDiffTime
+  eventResponses <- forM (intervals (eventStartTime, eventEndTime) maxInterval) $ \(start, end) -> do
+    let req = eventsRequest {SearchEventsRequest.startTime = start, SearchEventsRequest.endTime = end}
+    lift $ searchEvents (App.ticketmasterConsumerKey appState) req 1000
+  return $ concat eventResponses
 
-  artistsWithTracks <- forM localArtists $ \artist -> do
-    Jobs.yieldStatus $ "Getting tracks by " <> Artist.name artist
-    let knownTracks = fromMaybe [] $ M.lookup (Artist.name artist) tracksByArtistName
-    if length knownTracks >= 3
-      then return (artist, take 3 knownTracks)
-      else do
-        response <- lift $ Spotify.artistTopTracks spotifyAuth $ GetArtistTopTracksRequest.GetArtistTopTracksRequest {GetArtistTopTracksRequest.artistId = Artist.id artist}
-        -- Prefer the tracks that Spotify recommended.
-        let allTracks = nubUsing Track.id $ knownTracks ++ GetArtistTopTracksResponse.tracks response
-        return (artist, take 3 allTracks)
-
+-- Creates a playlist and returns the playlist URL.
+createPlaylistWithTracks :: T.Text -> T.Text -> [Track.Track] -> T.Text -> Jobs.Job T.Text
+createPlaylistWithTracks spotifyAuth spotifyUserId tracks playlistName = do
   Jobs.yieldStatus "Creating your playlist"
   playlistResponse <-
     lift $
@@ -256,14 +248,45 @@ discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth 
   let playlistId = CreatePlaylistResponse.id playlistResponse
 
   Jobs.yieldStatus "Adding tracks to your playlist"
-  _ <- lift $ forM (chunks 100 $ concatMap snd artistsWithTracks) $ \tracksChunk -> do
+  _ <- lift $ forM (chunks 100 $ tracks) $ \tracksChunk -> do
     _ <- Spotify.addTracks spotifyAuth playlistId $ AddTracksRequest.AddTracksRequest {AddTracksRequest.uris = map Track.uri tracksChunk}
     return ()
 
+  return $ CreatePlaylistResponse.spotify $ CreatePlaylistResponse.external_urls playlistResponse
+
+chooseTracksForArtists :: T.Text -> [Artist.Artist] -> M.Map T.Text [Track.Track] -> Jobs.Job [Track.Track]
+chooseTracksForArtists spotifyAuth artists tracksByArtistId = do
+  tracks <- forM artists $ \artist -> do
+    Jobs.yieldStatus $ "Getting tracks by " <> Artist.name artist
+    let knownTracks = fromMaybe [] $ M.lookup (Artist.id artist) tracksByArtistId
+    if length knownTracks >= 3
+      then
+        return $ take 3 knownTracks
+      else do
+        response <- lift $ Spotify.artistTopTracks spotifyAuth $ GetArtistTopTracksRequest.GetArtistTopTracksRequest {GetArtistTopTracksRequest.artistId = Artist.id artist}
+        -- Prefer the tracks that Spotify recommended.
+        return . take 3 . nubUsing Track.id $ (knownTracks ++ GetArtistTopTracksResponse.tracks response)
+  return $ concat tracks
+
+caseInsensitiveEq :: T.Text -> T.Text -> Bool
+caseInsensitiveEq a b = T.toLower a == T.toLower b
+
+discoverSpotify :: App.AppState -> T.Text -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> T.Text -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
+discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth playlistName = do
+  events <- findTicketmasterEvents appState eventsRequest
+  (artists, knownTracksByArtistId) <- findSpotifyArtists spotifyAuth spideringDepth
+
+  let ticketmasterArtists = nub . sort . concatMap attractionNamesFromEvent $ events
+  let artistIsLocal artist = any (\tickmasterArtist -> Artist.name artist `caseInsensitiveEq` tickmasterArtist) ticketmasterArtists
+  let localArtists = filter artistIsLocal artists
+
+  playlistTracks <- chooseTracksForArtists spotifyAuth localArtists knownTracksByArtistId
+  playlistUrl <- createPlaylistWithTracks spotifyAuth spotifyUserId playlistTracks playlistName
+
   return $
     SpotifyDiscovery.SpotifyDiscovery
-      { SpotifyDiscovery.playlistLink = CreatePlaylistResponse.spotify $ CreatePlaylistResponse.external_urls playlistResponse,
-        SpotifyDiscovery.artists = map (Artist.name . fst) artistsWithTracks,
+      { SpotifyDiscovery.playlistLink = playlistUrl,
+        SpotifyDiscovery.artists = map Artist.name localArtists,
         SpotifyDiscovery.spotifyArtists = map Artist.name artists,
         SpotifyDiscovery.ticketmasterArtists = ticketmasterArtists
       }
