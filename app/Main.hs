@@ -46,6 +46,7 @@ import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import Web.Scotty (ActionM)
 import qualified Web.Scotty as S
+import Control.Exception (SomeException (..), fromException)
 import qualified CommandLineArgs
 
 main :: IO ()
@@ -72,13 +73,19 @@ main = do
 loadPostalCodeLookup :: String -> IO Locations.PostalCodeLookup
 loadPostalCodeLookup filename = do
   content <- B.readFile filename
-  entries <- eitherIO $ (eitherDecode content :: Either String [Locations.PostalCodeLocation])
+  entries <- eitherIO (eitherDecode content :: Either String [Locations.PostalCodeLocation])
   return $ Locations.buildPostalCodeLookup entries
 
-handleException :: ErrStatus -> ActionM ()
-handleException (ErrStatus s msg) = do
-  S.status s
-  S.json $ object ["error" .= (T.pack msg <> ": " <> decodeUtf8 (statusMessage s))]
+handleException :: SomeException -> ActionM ()
+handleException e = do
+  let maybeErr = fromException e :: Maybe ErrStatus
+  case maybeErr of
+    Just (ErrStatus s msg) -> do
+      S.status s
+      S.json $ object ["error" .= (T.pack msg <> ": " <> decodeUtf8 (statusMessage s))]
+    Nothing -> do
+      S.status status500
+      S.json $ object ["error" .= T.pack (show e)]
 
 getSpotifyClientId :: App.AppT ActionM ()
 getSpotifyClientId = do
