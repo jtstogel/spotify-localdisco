@@ -16,8 +16,7 @@ import System.Environment (lookupEnv)
 data Env = Env
   { spotifyClientID :: Text,
     spotifyClientSecret :: Text,
-    ticketmasterConsumerKey :: Text,
-    ticketmasterConsumerSecret :: Text
+    ticketmasterConsumerKey :: Text
   }
   deriving (Show)
 
@@ -26,13 +25,11 @@ buildEnv get = do
   sClientID <- get "SPOTIFY_CLIENT_ID"
   sClientSecret <- get "SPOTIFY_CLIENT_SECRET"
   tConsumerKey <- get "TICKETMASTER_CONSUMER_KEY"
-  tConsumerSecret <- get "TICKETMASTER_CONSUMER_SECRET"
   return $
     Env
       { spotifyClientID = sClientID,
         spotifyClientSecret = sClientSecret,
-        ticketmasterConsumerKey = tConsumerKey,
-        ticketmasterConsumerSecret = tConsumerSecret
+        ticketmasterConsumerKey = tConsumerKey
       }
 
 second :: (b -> b') -> (a, b) -> (a, b')

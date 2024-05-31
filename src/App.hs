@@ -25,7 +25,6 @@ data AppState = AppState
   { spotifyClientID :: !Text,
     spotifyClientSecret :: !Text,
     ticketmasterConsumerKey :: !Text,
-    ticketmasterConsumerSecret :: !Text,
     postalCodeLookup :: !Locations.PostalCodeLookup,
     jobsDB :: !Jobs.DB,
     dbHandle :: !Storage.DBHandle,

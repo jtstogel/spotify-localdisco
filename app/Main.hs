@@ -61,7 +61,6 @@ main = do
           { App.spotifyClientID = Env.spotifyClientID env,
             App.spotifyClientSecret = Env.spotifyClientSecret env,
             App.ticketmasterConsumerKey = Env.ticketmasterConsumerKey env,
-            App.ticketmasterConsumerSecret = Env.ticketmasterConsumerSecret env,
             App.postalCodeLookup = postalCodeLookup,
             App.jobsDB = jobsDB,
             App.dbHandle = dbHandle,
