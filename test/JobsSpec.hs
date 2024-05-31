@@ -1,14 +1,17 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use newtype instead of data" #-}
 
 module JobsSpec (spec) where
 
 import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, takeMVar)
-import Data.Aeson
+import Data.Aeson (ToJSON, toJSON)
 import Data.Text (Text)
-import GHC.Generics
+import GHC.Generics (Generic)
 import qualified Jobs
-import Test.Hspec
+import Test.Hspec (Spec, describe, it, shouldReturn)
 import qualified Types.Job as Job
 
 data TestResult = TestResult

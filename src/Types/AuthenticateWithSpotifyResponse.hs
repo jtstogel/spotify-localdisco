@@ -7,7 +7,7 @@ module Types.AuthenticateWithSpotifyResponse
   )
 where
 
-import Data.Aeson (FromJSON, ToJSON, Value)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 

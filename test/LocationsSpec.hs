@@ -3,7 +3,18 @@
 module LocationsSpec (spec) where
 
 import Locations
-import Test.Hspec
+  ( PostalCodeLocation
+      ( PostalCodeLocation,
+        latitude,
+        longitude,
+        placeName,
+        postalCode
+      ),
+    buildPostalCodeLookup,
+    lookupGeoHash,
+    lookupPlaceName,
+  )
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 spec :: Spec
 spec = do
