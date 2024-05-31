@@ -40,3 +40,4 @@ npm run dev
 - [ ] Exclude the playlist from the user's taste profile so listening to it doesn't affect recommendations.
 - [ ] Sign up for Extended Quota w spotify
 - [ ] Overwrite the existing playlist instead of always making a new one.
+- [ ] Build inside docker for reproducible builds.
