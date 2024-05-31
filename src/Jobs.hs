@@ -16,7 +16,7 @@ module Jobs
   )
 where
 
-import Control.Concurrent (ThreadId, forkFinally)
+import Control.Concurrent (forkFinally)
 import Control.Concurrent.STM.TVar (TVar, modifyTVar, newTVarIO, readTVar)
 import qualified Control.Exception as Exception
 import Control.Monad.Coroutine (Coroutine, pogoStickM)
@@ -60,7 +60,7 @@ data JobStatus = JobStatus
 
 instance ToJSON JobStatus
 
-type Job r = Coroutine (Yield JobStatus) IO r
+type Job = Coroutine (Yield JobStatus) IO
 
 setJobDetails :: DB -> Text -> JobDetails -> IO ()
 setJobDetails (DB jobsVar) name = atomically . modifyTVar jobsVar . M.insert name

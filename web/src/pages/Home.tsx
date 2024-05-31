@@ -26,7 +26,7 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
       <h4>We're doing things...</h4>
       <ul>
         {succeededStatuses.map(m => <li>{m} &#10003;</li>)}
-        {pendingStatus ? <li><span className="loading">{pendingStatus}</span></li> : <></>}
+        {pendingStatus && <li><span className="loading">{pendingStatus}</span></li>}
       </ul>
     </div>
   }
@@ -43,17 +43,27 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
   }
 
 
+  const artists = data.result?.artists ?? [];
   return <div style={{ padding: '24px' }}>
     <h4>Artists playing soon near you</h4>
     <a href={data.result?.playlistLink}>Click to see your playlist</a>
     <ul>
-      {data.result?.artists?.map(a => <li>{a}</li>)}
+      {artists.slice(0, 10).map(a => <li>{a}</li>)}
+      {artists.length > 10 && <li>And {artists.length - 10} more...</li>}
     </ul>
   </div>
 }
 
+function padZeros(n: number, len: number) {
+  return String(n).padStart(len, '0')
+}
+
 function dateString(d: Date): string {
-  return d.toISOString().substring(0, 'YYYY-MM-DD'.length)
+  return [
+    padZeros(d.getFullYear(), 4),
+    padZeros(d.getMonth() + 1, 2),
+    padZeros(d.getDate(), 2)
+  ].join('-')
 }
 
 enum NewMusic {
@@ -117,11 +127,11 @@ const Home = () => {
         <form onSubmit={handleSubmit}>
           <div className="row">
             <label htmlFor="postalCode">Postal code</label>
-            <input value={postalCode} name="postalCode" onChange={e => setPostalCode(e.target.value)} type="number"></input>
+            <input value={postalCode} name="postalCode" onChange={e => setPostalCode(e.target.value)} pattern="[0-9]*"></input>
           </div>
           <div className="row">
             <label htmlFor="radiusMiles">Concert distance (miles)</label>
-            <input value={radiusMiles} name="radiumMiles" onChange={e => setRadiusMiles(e.target.value)} type="number"></input>
+            <input value={radiusMiles} name="radiumMiles" onChange={e => setRadiusMiles(e.target.value)} pattern="[0-9]*"></input>
           </div>
           <div className="row">
             <label htmlFor="startDate">Concert search start</label>
@@ -133,13 +143,13 @@ const Home = () => {
           </div>
           <div className="row">
             <label htmlFor="spiderDepth">Music search</label>
-            <div style={{'textAlign': 'left'}}>
+            <div style={{ 'textAlign': 'left' }}>
               {
                 NEW_MUSIC_SETTINGS.map(value =>
                   <label key={value}>
                     <input value={value} name="spiderDepth" checked={newMusic === value} onChange={e => setNewMusic(e.target.value as NewMusic)} type="radio" />
                     {value}
-                    <br/>
+                    <br />
                   </label>
                 )
               }

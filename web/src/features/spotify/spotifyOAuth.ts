@@ -1,6 +1,6 @@
 export const SPOTIFY_OAUTH_REDIRECT_PATH = "/spotify/auth"
 
-const SPOTIFY_OAUTH_SCOPE = "playlist-modify-private user-follow-read user-top-read user-library-read ugc-image-upload";
+const SPOTIFY_OAUTH_SCOPE = "playlist-modify-private user-follow-read user-top-read user-library-read";
 
 function oAuthRedirectUri() {
     return window.location.origin + SPOTIFY_OAUTH_REDIRECT_PATH

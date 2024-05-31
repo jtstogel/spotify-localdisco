@@ -142,20 +142,6 @@ getPlaceName = do
   lift $ S.addHeader "Cache-Control" "no-store"
   lift . S.text $ LazyText.fromStrict placeName
 
-getTopArtists :: App.AppT ActionM ()
-getTopArtists = do
-  auth <- lift (S.queryParam "spotifyAccessToken" :: ActionM Text)
-  limit <- lift (S.queryParam "limit" :: ActionM Int)
-  artists <- liftIO $ CreatePlaylist.getTopArtists auth CreatePlaylist.MediumTerm limit
-  lift $ S.json artists
-
-getTopTracks :: App.AppT ActionM ()
-getTopTracks = do
-  auth <- lift (S.queryParam "spotifyAccessToken" :: ActionM Text)
-  limit <- lift (S.queryParam "limit" :: ActionM Int)
-  tracks <- liftIO $ CreatePlaylist.getTopTracks auth CreatePlaylist.MediumTerm limit
-  lift $ S.json tracks
-
 mkPlaylistName :: Text -> UTCTime -> UTCTime -> Text
 mkPlaylistName placeName start end = "Concerts near " <> placeName <> ", " <> dateRange
   where
@@ -358,8 +344,6 @@ routes appState = S.scotty 8080 $ do
   S.get "/spotify/me" $ App.runAppT appState getSpotifyProfile
 
   S.get "/spotify/clientId" $ App.runAppT appState getSpotifyClientId
-  S.get "/spotify/topArtists" $ App.runAppT appState getTopArtists
-  S.get "/spotify/topTracks" $ App.runAppT appState getTopTracks
   S.get "/geohash" $ App.runAppT appState getGeoHash
   S.get "/placeName" $ App.runAppT appState getPlaceName
   S.get "/localArtists" $ App.runAppT appState getEvents

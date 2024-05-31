@@ -16,4 +16,6 @@ data ListTopItemsRequest = ListTopItemsRequest
   }
   deriving (Generic, Show)
 
+instance ToJSON ListTopItemsRequest
+
 instance FromJSON ListTopItemsRequest

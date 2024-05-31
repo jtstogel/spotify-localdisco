@@ -27,6 +27,9 @@ export const spotifySlice = createAppSlice({
         clientIdLoaded: create.reducer<string>((state, { payload }) => {
             state.clientId = payload
         }),
+        signOutInitiated: create.reducer<void>((state) => {
+            state.discoUserId = undefined;
+        }),
         userProfileLoaded: create.reducer<SpotifyUserProfile>((state, { payload }) => {
             state.userProfile = payload
         }),
@@ -68,6 +71,7 @@ export const {
     clientIdLoaded,
     userProfileLoaded,
     oAuthFlowInitiated,
+    signOutInitiated,
 } = spotifySlice.actions
 
 export const {

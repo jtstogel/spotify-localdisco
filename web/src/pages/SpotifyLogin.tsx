@@ -4,6 +4,7 @@ import { useAppDispatch } from "../app/hooks";
 import { oAuthFlowInitiated } from "../features/spotify/spotifySlice";
 import { saveStore } from "../app/store";
 import './SpotifyLogin.css';
+import spotifyIconImg from './spotify-icon.png'
 
 const SpotifyLogin = () => {
     const { data: clientId, isLoading, error } = useGetSpotifyClientIdQuery();
@@ -24,7 +25,13 @@ const SpotifyLogin = () => {
 
     return (
         <div>
-            <button className="login-button" onClick={login}>Login with Spotify</button>
+            <div className="description">
+                <p>Log in to make a playlist of artists playing nearby.</p>
+            </div>
+            <button className="login-button" onClick={login}>
+                Log in with Spotify
+                <img className="spotify-icon" src={spotifyIconImg}></img>
+            </button>
         </div>
     )
 };

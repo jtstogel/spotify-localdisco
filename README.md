@@ -22,7 +22,6 @@ TODO:
 - [ ] Cache some requests for like a month (spotify's recommendations API in particular)
 - [ ] Make the created playlist private. IDK why it's public rn.
 - [ ] Exclude the playlist from the user's taste profile so listening to it doesn't affect recommendations.
-- [ ] Reduce `scope` when requesting spotify auth.
 - [ ] Sign up for Extended Quota w spotify
 - [ ] Overwrite the existing playlist instead of always making a new one.
 - [ ] Do fuzzy string matching when comparing artist names between Ticketmaster and Spotify.

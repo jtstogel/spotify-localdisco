@@ -5,7 +5,7 @@ module Types.Spotify.TopTracksResponse
   )
 where
 
-import Data.Aeson (FromJSON)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import qualified Types.Spotify.Track as Track
@@ -16,5 +16,7 @@ data TopTracksResponse = TopTracksResponse
     items :: Maybe [Track.Track]
   }
   deriving (Generic, Show)
+
+instance ToJSON TopTracksResponse
 
 instance FromJSON TopTracksResponse

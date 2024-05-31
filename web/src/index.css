@@ -8,6 +8,10 @@ body {
   background-color: var(--background-color);
 }
 
+html, body, #root {
+  height: 100%;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;

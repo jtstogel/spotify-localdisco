@@ -27,7 +27,8 @@ module Storage
     getSpotifyUserAuth,
     upsertSpotifyUserAuth,
     getSpotifyUserAuthByUser,
-    deleteSpotifyUserAuthByUser
+    deleteSpotifyUserAuthByUser,
+    runWithCache,
   )
 where
 
@@ -38,9 +39,13 @@ import Control.Monad.Trans.Class (MonadTrans (..))
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Foldable (forM_)
 import Data.Text (Text)
-import Data.Time.Clock (UTCTime)
+import Data.ByteString (ByteString)
+import Data.Time.Clock (UTCTime, getCurrentTime, NominalDiffTime)
 import Database.Persist.Sqlite (ConnectionPool, Entity (..), SqlBackend, createSqlitePool, delete, getBy, insert_, replace, runMigration, runSqlPool)
 import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
+import Data.Time (addUTCTime)
+import Data.Aeson (ToJSON, FromJSON, decode, encode)
+import Data.ByteString.Lazy (fromStrict, toStrict)
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
@@ -60,6 +65,12 @@ SpotifyUserAuth
     refreshToken Text
     expireTime UTCTime
     refreshing Bool
+
+CacheItem
+    key Text
+    UniqueCacheItem key
+    value ByteString
+    expireTime UTCTime
 |]
 
 newtype DatabaseT m a = DatabaseT {runDatabaseT :: ReaderT SqlBackend m a}
@@ -93,12 +104,53 @@ type DBHandle = ConnectionPool
 runWithDB :: (MonadUnliftIO m) => DBHandle -> DatabaseT m a -> m a
 runWithDB pool action = runSqlPool (runDatabaseT action) pool
 
+-- Gets a value from the cache, or runs the computation and stores the value for later use.
+runWithCache :: (MonadUnliftIO m, ToJSON a, FromJSON a) => DBHandle -> Text -> NominalDiffTime -> m a -> m a
+runWithCache pool key validityDuration computation = do
+  maybeValueJSON <- runWithDB pool $ cacheLookup key
+  let maybeValue = (>>= decode) $ fromStrict <$> maybeValueJSON
+  case maybeValue of
+    Just value -> return value
+    Nothing -> do
+      result <- computation
+      _ <- runWithDB pool $ cacheInsert key (toStrict $ encode result) validityDuration
+      return result
+
 -- Opens a DB connection pool given the SQLite file name
 createDatabaseHandle :: Text -> Int -> IO DBHandle
 createDatabaseHandle sqliteFile poolSize = runNoLoggingT $ do
   pool <- createSqlitePool sqliteFile poolSize
   runSqlPool (runMigration migrateAll) pool
   return pool
+
+-- Gets an item from the cache.
+cacheLookup :: (MonadUnliftIO m) => Text -> DatabaseT m (Maybe ByteString)
+cacheLookup key = DatabaseT $ do
+  now <- liftIO getCurrentTime
+  entity <- getBy (UniqueCacheItem key)
+  let valid = maybe False ((now <) . cacheItemExpireTime . entityVal) entity
+  if not valid
+    then do
+      _ <- runDatabaseT $ cacheDelete key
+      return Nothing
+    else return $ cacheItemValue . entityVal <$> entity
+
+-- Inserts an item into the cache.
+cacheInsert :: (MonadUnliftIO m) => Text -> ByteString -> NominalDiffTime -> DatabaseT m ()
+cacheInsert key value validityDuration = DatabaseT $ do
+  now <- liftIO getCurrentTime
+  let expireTime = addUTCTime validityDuration now
+  existingCacheItem <- getBy (UniqueCacheItem key)
+  let cacheItem = CacheItem { cacheItemKey = key, cacheItemValue = value, cacheItemExpireTime = expireTime }
+  case existingCacheItem of
+    Just entity -> replace (entityKey entity) cacheItem
+    Nothing -> insert_ cacheItem
+
+-- Removes an item from the cache.
+cacheDelete :: (MonadUnliftIO m) => Text -> DatabaseT m ()
+cacheDelete key = DatabaseT $ do
+  maybeCacheItem <- getBy $ UniqueCacheItem key
+  forM_ maybeCacheItem (delete . entityKey)
 
 -- Gets a DiscoUser by their UUID
 getDiscoUser :: (MonadUnliftIO m) => Text -> DatabaseT m (Maybe DiscoUser)
