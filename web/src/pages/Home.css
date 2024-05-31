@@ -75,6 +75,7 @@
   border-width: 2px;
   margin: 36px auto;
   padding-bottom: 36px;
+  margin-bottom: 64px;
   color: var(--dark-color);
 }
 

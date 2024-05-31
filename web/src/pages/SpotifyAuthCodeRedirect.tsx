@@ -3,6 +3,8 @@ import { useEffect } from "react"
 import { useNavigate } from "react-router-dom";
 import { authCodeReceived, selectUserAuthenticated } from "../features/spotify/spotifySlice";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
+import '../styles/spinner.css'
+import './SpotifyAuthCodeRedirect.css';
 
 const SpotifyAuthCodeRedirect = () => {
   const [searchParams] = useSearchParams();
@@ -26,7 +28,9 @@ const SpotifyAuthCodeRedirect = () => {
     }
   }, [navigate, isAuthenticated]);
 
-  return <div>authenticating...</div>
+  return <div>
+    <div className="spinner-container"><span className="spinner"></span></div>
+  </div>
 }
 
 export default SpotifyAuthCodeRedirect

@@ -23,7 +23,7 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
     const pendingStatus = statuses[statuses.length - 1];
 
     return <div style={{ padding: '24px' }}>
-      <h4>We're doing things...</h4>
+      <h4>Curating your playlist...</h4>
       <ul>
         {succeededStatuses.map(m => <li>{m} &#10003;</li>)}
         {pendingStatus && <li><span className="loading">{pendingStatus}</span></li>}
