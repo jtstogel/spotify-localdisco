@@ -1,6 +1,6 @@
 @import '../vars.css';
 
-.login-button {
+.button {
     background-color: #fae2c7;
     display: flex;
     align-items: center;
@@ -26,25 +26,6 @@
     margin-left: 8px;
 }
 
-.login-button:hover {
+.button:hover {
     opacity: 80%;
 }
-
-.description {
-    width: 500px;
-    margin: 22px auto;
-    text-align: center;
-    color: var(--dark-color);
-    background-color: var(--accent-color);
-    font-size: 18px;
-    border-radius: 12px;
-    padding: 2px 8px;
-}
-
-@media only screen and (max-width: 550px) {
-    .description {
-        border-radius: 0px;
-        width: 100%;
-    }
-  }
-  

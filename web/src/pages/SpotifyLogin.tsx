@@ -7,6 +7,7 @@ import './SpotifyLogin.css';
 import spotifyIconImg from './spotify-icon.png'
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import SpotifyButton from "../components/SpotifyButton";
 
 const SpotifyLogin = () => {
     const { data: clientId, isLoading, error } = useGetSpotifyClientIdQuery();
@@ -30,6 +31,7 @@ const SpotifyLogin = () => {
     const login = async () => {
         const oAuthParams = await generateOAuthParams(clientId!)
         dispatch(oAuthFlowInitiated(oAuthParams))
+
         // Ensure the store is saved before redirecting the user.
         saveStore();
         redirectToSpotifyOAuth2(oAuthParams);
@@ -40,10 +42,7 @@ const SpotifyLogin = () => {
             <div className="description">
                 <p>Log in to make a playlist of artists playing nearby.</p>
             </div>
-            <button className="login-button" onClick={login}>
-                Log in with Spotify
-                <img className="spotify-icon" src={spotifyIconImg}></img>
-            </button>
+            <SpotifyButton onClick={login}>Log in with Spotify</SpotifyButton>
         </div>
     )
 };

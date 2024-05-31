@@ -1,0 +1,41 @@
+@import '../vars.css';
+
+.submit-button {
+  background-color: #FFF;
+  color: var(--dark-color);
+  display: block;
+  margin: auto;
+  padding: 12px 36px;
+  border-radius: 8px;
+  margin-top: 32px;
+  border: 2px solid var(--dark-color);
+
+  letter-spacing: 2px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  transition: all .3s ease;
+}
+
+.submit-button:hover {
+  background-color: #EDF5F9;
+}
+
+label {
+  text-align: left;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  padding: 6px 36px;
+}
+
+@media only screen and (max-width: 650px) {
+  .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 6px 36px;
+  }
+}

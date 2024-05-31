@@ -1,4 +1,4 @@
-import './SpotifyAccountIcon.css'
+import styles from './SpotifyAccountIcon.module.css'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { selectAuthToken, signOutInitiated } from '../features/spotify/spotifySlice';
 import { useGetSpotifyProfileQuery } from '../features/api/apiSlice';
@@ -9,11 +9,11 @@ const SpotifyAccountIcon = () => {
     if (!authToken) {
         return <></>
     }
-    return <LoggedInSpotifyIcon token={authToken} />
+    return <LoggedInSpotifyIcon authToken={authToken} />
 };
 
-const LoggedInSpotifyIcon = ({ token }: { token: string }) => {
-    const { data: profile, isLoading, error } = useGetSpotifyProfileQuery(token);
+const LoggedInSpotifyIcon = ({ authToken }: { authToken: string }) => {
+    const { data: profile, isLoading, error } = useGetSpotifyProfileQuery(authToken);
     const dispatch = useAppDispatch();
     const [optionsOpen, setOptionsOpen] = useState(false);
 
@@ -29,10 +29,6 @@ const LoggedInSpotifyIcon = ({ token }: { token: string }) => {
             document.body.removeEventListener('click', closeOptions);
         };
     });
-    
-    if (!token) {
-        return (<div>not logged in</div>)
-    }
 
     if (isLoading) {
         return (<></>)
@@ -56,9 +52,9 @@ const LoggedInSpotifyIcon = ({ token }: { token: string }) => {
 
     return (
         <div>
-            <img className="profile-image" alt="spotify profile" onClick={toggleOptionsOpen} src={profile?.profileImageUrl} />
-            <div className={'options-dropdown ' + (optionsOpen ? 'open' : 'closed')}>
-                <button className="option" onClick={signOut}>Sign out</button>
+            <img className={styles['profile-image']} alt="spotify profile" onClick={toggleOptionsOpen} src={profile?.profileImageUrl} />
+            <div className={styles['options-dropdown'] + ' ' + (optionsOpen ? styles['open'] : styles['closed'])}>
+                <button className={styles['option']} onClick={signOut}>Sign out</button>
             </div>
         </div>
     )
