@@ -11,9 +11,11 @@ RUN unzip /data/postal-codes.json.zip -d /data/
 ARG STACK_INSTALL_PATH
 COPY ${STACK_INSTALL_PATH}/bin/localdisco_server /bin/localdisco_server
 
+EXPOSE 80
+
 ENTRYPOINT [ \
     "/bin/localdisco_server", \
-    "--port=8080", \
+    "--port=80", \
     "--postal_codes_path=/data/postal-codes.json", \
     "--database_path=/data/db.sqlite" \
 ]
