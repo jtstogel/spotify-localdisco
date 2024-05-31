@@ -1,35 +1,70 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{- HLINT ignore "Use newtype instead of data" -}
+
 module CommandLineArgs
-  ( Sample(..)
-  , sample
+  ( Args (..),
+    parse,
   )
 where
 
+import Data.Text (Text)
 import Options.Applicative
+  ( Parser,
+    ParserInfo,
+    auto,
+    execParser,
+    help,
+    helper,
+    info,
+    long,
+    metavar,
+    option,
+    progDesc,
+    showDefault,
+    strOption,
+    value,
+    (<**>),
+  )
 
-data Sample = Sample
-  { hello :: String,
-    quiet :: Bool,
-    enthusiasm :: Int
+parse :: IO Args
+parse = execParser opts
+
+opts :: ParserInfo Args
+opts =
+  info
+    (args <**> helper)
+    (progDesc "Run the Local Disco web server")
+
+data Args = Args
+  { port :: Int,
+    postalCodesPath :: Text,
+    databasePath :: Text
   }
 
-sample :: Parser Sample
-sample =
-  Sample
-    <$> strOption
-      ( long "hello"
-          <> metavar "TARGET"
-          <> help "Target for the greeting"
-      )
-    <*> switch
-      ( long "quiet"
-          <> short 'q'
-          <> help "Whether to be quiet"
-      )
-    <*> option
+args :: Parser Args
+args =
+  Args
+    <$> option
       auto
-      ( long "enthusiasm"
-          <> help "How enthusiastically to greet"
+      ( long "port"
+          <> help "Port to run the web server on."
           <> showDefault
-          <> value 1
+          <> value 8080
           <> metavar "INT"
+      )
+    <*> strOption
+      ( long "postal_codes_path"
+          <> help "Path to JSON file containing postal code information."
+          <> showDefault
+          <> value "postal-codes.json"
+          <> metavar "FILE_PATH"
+      )
+    <*> strOption
+      ( long "database_path"
+          <> help "Path to sqlite database."
+          <> showDefault
+          <> value "data/db.sqlite"
+          <> metavar "FILE_PATH"
       )

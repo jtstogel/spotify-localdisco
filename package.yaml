@@ -66,7 +66,7 @@ library:
   source-dirs: src
 
 executables:
-  web-exe:
+  localdisco_server:
     main:               Main.hs
     source-dirs:        app
     ghc-options:

@@ -28,7 +28,8 @@ data AppState = AppState
     ticketmasterConsumerSecret :: !Text,
     postalCodeLookup :: !Locations.PostalCodeLookup,
     jobsDB :: !Jobs.DB,
-    dbHandle :: !Storage.DBHandle
+    dbHandle :: !Storage.DBHandle,
+    port :: Int
   }
 
 type AppT m = ReaderT AppState m
