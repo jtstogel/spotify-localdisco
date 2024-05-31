@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use newtype instead of data" #-}
+{- HLINT ignore "Use newtype instead of data" -}
 
 module JobsSpec (spec) where
 

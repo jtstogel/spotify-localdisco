@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       App
+      CommandLineArgs
       CreatePlaylist
       Env
       Errors
@@ -88,6 +89,7 @@ library
     , monad-logger
     , monad-loops
     , mtl
+    , optparse-applicative
     , persistent
     , persistent-sqlite
     , persistent-template
@@ -129,6 +131,7 @@ executable web-exe
     , monad-logger
     , monad-loops
     , mtl
+    , optparse-applicative
     , persistent
     , persistent-sqlite
     , persistent-template
@@ -177,6 +180,7 @@ test-suite spec
     , monad-logger
     , monad-loops
     , mtl
+    , optparse-applicative
     , persistent
     , persistent-sqlite
     , persistent-template

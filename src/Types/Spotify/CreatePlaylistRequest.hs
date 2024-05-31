@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
+
+{- HLINT ignore "Use newtype instead of data" -}
 
 module Types.Spotify.CreatePlaylistRequest
   ( CreatePlaylistRequest (..),

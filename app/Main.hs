@@ -23,7 +23,6 @@ import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUIDV4
-import Debug.Trace
 import Env (Env (spotifyClientID))
 import qualified Env
 import Errors (ErrStatus (..), eitherIO, eitherStatusIO, maybeIO, maybeStatusIO, throwErr)
@@ -47,13 +46,15 @@ import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
 import Web.Scotty (ActionM)
 import qualified Web.Scotty as S
+import qualified CommandLineArgs
 
 main :: IO ()
 main = do
+  args <- CommandLineArgs.parse
   env <- Env.load
-  postalCodeLookup <- loadPostalCodeLookup "postal-codes.json"
+  postalCodeLookup <- loadPostalCodeLookup (T.unpack $ CommandLineArgs.postalCodesPath args)
   jobsDB <- Jobs.newDB
-  dbHandle <- Storage.createDatabaseHandle "data/db.sqlite" 10
+  dbHandle <- Storage.createDatabaseHandle (CommandLineArgs.databasePath args) 10
 
   let appState =
         App.AppState
@@ -63,7 +64,8 @@ main = do
             App.ticketmasterConsumerSecret = Env.ticketmasterConsumerSecret env,
             App.postalCodeLookup = postalCodeLookup,
             App.jobsDB = jobsDB,
-            App.dbHandle = dbHandle
+            App.dbHandle = dbHandle,
+            App.port = CommandLineArgs.port args
           }
 
   routes appState
@@ -244,10 +246,10 @@ saveSpotifyAuth spotifyUserId authResponse = do
 authenticateWithSpotify :: App.AppT ActionM ()
 authenticateWithSpotify = do
   request <- lift S.jsonData :: App.AppT ActionM AuthenticateWithSpotifyRequest.AuthenticateWithSpotifyRequest
-  authResponse <- exchangeAuthCode (traceShowId request)
+  authResponse <- exchangeAuthCode request
 
-  userProfile <- liftIO . Spotify.getUserProfile . SpotifyAuthenticateResponse.access_token $ traceShowId authResponse
-  let spotifyUserId = SpotifyUserProfile.id (traceShowId userProfile)
+  userProfile <- liftIO . Spotify.getUserProfile . SpotifyAuthenticateResponse.access_token $ authResponse
+  let spotifyUserId = SpotifyUserProfile.id userProfile
 
   user <- App.runWithDB $ saveSpotifyAuth spotifyUserId authResponse
   lift . S.json $
@@ -336,7 +338,7 @@ appCorsResourcePolicy =
     }
 
 routes :: App.AppState -> IO ()
-routes appState = S.scotty 8080 $ do
+routes appState = S.scotty (App.port appState) $ do
   S.defaultHandler (S.Handler handleException)
   S.middleware allowCors
 

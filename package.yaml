@@ -23,31 +23,32 @@ dependencies:
 - aeson
 - array
 - base >= 4.7 && < 5
-- yesod
-- persistent
-- persistent-sqlite
-- persistent-template
-- monad-logger
-- resourcet
 - blaze-html
 - bytestring
 - containers
 - http-conduit
 - http-types
 - monad-coroutine
+- monad-logger
 - monad-loops
-- unliftio-core
 - mtl
+- optparse-applicative
+- persistent
+- persistent-sqlite
+- persistent-template
+- resourcet
 - scotty
 - sort
 - stm
 - text
 - time
 - transformers
+- unliftio-core
 - uuid
 - wai
 - wai-cors
 - wai-extra
+- yesod
 - temporary # Test-only, but whatevs
 
 ghc-options:

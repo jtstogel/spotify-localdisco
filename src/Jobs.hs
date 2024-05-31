@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use newtype instead of data" #-}
+{- HLINT ignore "Use newtype instead of data" -}
 
 module Jobs
   ( runJob,
@@ -31,7 +31,7 @@ import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import Errors (ErrStatus (..))
 import GHC.Generics (Generic)
-import Network.HTTP.Types.Status (status404, status500, statusCode, statusMessage)
+import Network.HTTP.Types.Status (status404, statusCode, statusMessage)
 import qualified Types.Job as Job
 
 newtype DB = DB (TVar (M.Map Text JobDetails))
@@ -68,10 +68,10 @@ setJobDetails (DB jobsVar) name = atomically . modifyTVar jobsVar . M.insert nam
 -- Runs a job in another thread and updates the shared job status at every yield.
 runJobFinally :: (ToJSON r) => DB -> Text -> IO () -> Job r -> IO ()
 runJobFinally db name finally coroutine = do
-  let recordError error = setJobDetails db name $ defaultDetails {err = Just error}
-  let recordResult result = setJobDetails db name $ defaultDetails {result = Just result}
-  let recordStatus status = setJobDetails db name $ defaultDetails {status = Just status}
-  let recordYieldedStatus (Yield status cont) = do _ <- recordStatus status; return cont
+  let recordError e = setJobDetails db name $ defaultDetails {err = Just e}
+  let recordResult r = setJobDetails db name $ defaultDetails {result = Just r}
+  let recordStatus s = setJobDetails db name $ defaultDetails {status = Just s}
+  let recordYieldedStatus (Yield s cont) = do _ <- recordStatus s; return cont
 
   _ <- recordStatus $ JobStatus {message = "Queued job..."}
 
@@ -80,9 +80,7 @@ runJobFinally db name finally coroutine = do
       ( do
           resultEither <- Exception.try $ pogoStickM recordYieldedStatus coroutine
           case resultEither of
-            Left e -> case e of
-              ErrStatus _ _ -> recordError e
-              _ -> recordError $ ErrStatus status500 (show e)
+            Left e -> recordError e
             Right r -> recordResult (toJSON r)
       )
       (const finally)

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-{-# HLINT ignore "Use newtype instead of data" #-}
+{- HLINT ignore "Use newtype instead of data" -}
 
 module Types.AuthenticateWithSpotifyResponse
   ( AuthenticateWithSpotifyResponse (..),
