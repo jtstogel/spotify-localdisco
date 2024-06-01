@@ -21,7 +21,7 @@ import Data.Map.Strict (insertWith)
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Text as T
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
-import qualified Durations as Durations
+import qualified Durations
 import qualified Jobs
 import qualified Spotify
 import qualified Ticketmaster

@@ -24,7 +24,7 @@ import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUIDV4
-import qualified Durations as Durations
+import qualified Durations
 import Env (Env (spotifyClientID))
 import qualified Env
 import Errors (ErrStatus (..), eitherIO, eitherStatusIO, maybeStatusIO, throwErr)
