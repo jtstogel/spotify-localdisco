@@ -1,5 +1,6 @@
 import styles from "./PlaylistConfigurationForm.module.css"
-import { FormEvent, useState } from "react"
+import type { FormEvent} from "react";
+import { useState } from "react"
 
 function padZeros(n: number, len: number) {
   return String(n).padStart(len, '0')

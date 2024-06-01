@@ -2,7 +2,8 @@ import styles from './SpotifyAccountIcon.module.css'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { selectAuthToken, signOutInitiated } from '../features/spotify/spotifySlice';
 import { useGetSpotifyProfileQuery } from '../features/api/apiSlice';
-import { MouseEventHandler, useState, useEffect } from 'react';
+import type { MouseEventHandler} from 'react';
+import { useState, useEffect } from 'react';
 
 const SpotifyAccountIcon = () => {
     const authToken = useAppSelector(selectAuthToken);

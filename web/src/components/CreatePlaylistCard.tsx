@@ -1,6 +1,7 @@
 import styles from "./CreatePlaylistCard.module.css"
 import { useCreatePlaylistJobMutation } from "../features/api/apiSlice"
-import PlaylistConfigurationForm, { PlaylistConfig } from "../components/PlaylistConfigurationForm"
+import type { PlaylistConfig } from "../components/PlaylistConfigurationForm";
+import PlaylistConfigurationForm from "../components/PlaylistConfigurationForm"
 import CreatePlaylistStatus from './CreatePlaylistStatus'
 
 const CreatePlaylistCard = ({authToken}: {authToken: string}) => {

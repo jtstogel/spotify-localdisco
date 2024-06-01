@@ -1,29 +1,19 @@
 import { useGetSpotifyClientIdQuery } from "../features/api/apiSlice";
 import { generateOAuthParams, redirectToSpotifyOAuth2 } from "../features/spotify/spotifyOAuth";
-import { useAppDispatch, useAppSelector } from "../app/hooks";
-import { oAuthFlowInitiated, selectUserAuthenticated } from "../features/spotify/spotifySlice";
+import { useAppDispatch } from "../app/hooks";
+import { oAuthFlowInitiated } from "../features/spotify/spotifySlice";
 import { saveStore } from "../app/store";
 import './SpotifyLogin.css';
-import spotifyIconImg from './spotify-icon.png'
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 import SpotifyButton from "../components/SpotifyButton";
 
 const SpotifyLogin = () => {
     const { data: clientId, isLoading, error } = useGetSpotifyClientIdQuery();
     const dispatch = useAppDispatch();
-    const isAuthenticated = useAppSelector(selectUserAuthenticated);
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            navigate('/');
-        }
-    }, [navigate, isAuthenticated]);
 
     if (isLoading) {
         return <></>
     }
+
     if (error) {
         return <div>client load failed: {JSON.stringify(error)}</div>
     }
