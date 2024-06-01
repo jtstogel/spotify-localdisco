@@ -164,7 +164,7 @@ recommendationsForArtist auth artist =
 searchEvents :: T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> IO [Event.Event]
 searchEvents auth = listN (Ticketmaster.searchEvents auth) makeNextRequest getItems
   where
-    getItems = fromMaybe [] . SearchEventsResponse.events . SearchEventsResponse._embedded
+    getItems = fromMaybe [] . (SearchEventsResponse.events <=< SearchEventsResponse._embedded)
     makeNextRequest req res = do
       let page = SearchEventsResponse.page res
       let pageNumber = SearchEventsResponse.number page
@@ -283,19 +283,29 @@ caseInsensitiveEq a b = T.toLower a == T.toLower b
 discoverSpotify :: App.AppState -> T.Text -> T.Text -> SearchEventsRequest.SearchEventsRequest -> Int -> T.Text -> Jobs.Job SpotifyDiscovery.SpotifyDiscovery
 discoverSpotify appState spotifyAuth spotifyUserId eventsRequest spideringDepth playlistName = do
   events <- findTicketmasterEvents appState eventsRequest
-  (artists, knownTracksByArtistId) <- findSpotifyArtists appState spotifyAuth spotifyUserId spideringDepth
-
   let ticketmasterArtists = nub . sort . concatMap attractionNamesFromEvent $ events
   let artistIsLocal artist = any (\tickmasterArtist -> Artist.name artist `caseInsensitiveEq` tickmasterArtist) ticketmasterArtists
-  let localArtists = filter artistIsLocal artists
 
-  playlistTracks <- chooseTracksForArtists appState spotifyAuth localArtists knownTracksByArtistId
-  playlistUrl <- createPlaylistWithTracks spotifyAuth spotifyUserId playlistTracks playlistName
+  if null ticketmasterArtists
+    then
+      return $
+        SpotifyDiscovery.SpotifyDiscovery
+          { SpotifyDiscovery.playlistLink = "",
+            SpotifyDiscovery.artists = [],
+            SpotifyDiscovery.spotifyArtists = [],
+            SpotifyDiscovery.ticketmasterArtists = []
+          }
+    else do
+      (artists, knownTracksByArtistId) <- findSpotifyArtists appState spotifyAuth spotifyUserId spideringDepth
+      let localArtists = filter artistIsLocal artists
 
-  return $
-    SpotifyDiscovery.SpotifyDiscovery
-      { SpotifyDiscovery.playlistLink = playlistUrl,
-        SpotifyDiscovery.artists = map Artist.name localArtists,
-        SpotifyDiscovery.spotifyArtists = map Artist.name artists,
-        SpotifyDiscovery.ticketmasterArtists = ticketmasterArtists
-      }
+      playlistTracks <- chooseTracksForArtists appState spotifyAuth localArtists knownTracksByArtistId
+      playlistUrl <- createPlaylistWithTracks spotifyAuth spotifyUserId playlistTracks playlistName
+
+      return $
+        SpotifyDiscovery.SpotifyDiscovery
+          { SpotifyDiscovery.playlistLink = playlistUrl,
+            SpotifyDiscovery.artists = map Artist.name localArtists,
+            SpotifyDiscovery.spotifyArtists = map Artist.name artists,
+            SpotifyDiscovery.ticketmasterArtists = ticketmasterArtists
+          }

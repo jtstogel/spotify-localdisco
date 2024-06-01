@@ -17,6 +17,7 @@
     object-fit: cover;
     background-color: var(--accent-color);
     border-radius: 18px;
+    cursor: pointer;
 }
 
 .logo-container {

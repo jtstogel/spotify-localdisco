@@ -3,7 +3,9 @@
 .spinner {
     width: 100%;
     height: 100%;
-    border: 5px solid #FFF;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #FFF;
     border-bottom-color: transparent;
     border-radius: 50%;
     display: inline-block;
