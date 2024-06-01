@@ -14,7 +14,7 @@ function dateString(d: Date): string {
 }
 
 enum NewMusic {
-  NONE = 'Only known artists',
+  NONE = 'Only your artists',
   SOME = 'Some new artists',
   LOTS = 'Lots of new artists'
 }
@@ -66,7 +66,7 @@ const PlaylistConfigurationForm = (
       <h4>Configure your playlist</h4>
       <form onSubmit={handleSubmit}>
         <div className={styles.row}>
-          <label htmlFor="postalCode">Postal code</label>
+          <label htmlFor="postalCode">Postal code (US only)</label>
           <input value={postalCode} name="postalCode" onChange={e => setPostalCode(e.target.value)} pattern="[0-9]*"></input>
         </div>
         <div className={styles.row}>
