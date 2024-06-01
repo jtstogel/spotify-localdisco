@@ -21,6 +21,7 @@ import Data.Map.Strict (insertWith)
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Text as T
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
+import qualified Durations as Durations
 import qualified Jobs
 import qualified Spotify
 import qualified Ticketmaster
@@ -81,7 +82,7 @@ initialTopItemsRequest term =
 getTopArtists :: App.AppState -> T.Text -> T.Text -> SpotifyTermDuration -> Int -> IO [Artist.Artist]
 getTopArtists appState auth userId term = listN cachedTop makeNextRequest getItems (initialTopItemsRequest term)
   where
-    cachedTop = App.memoize appState ("topArtists/" <> userId) (hours 24) (Spotify.listTopArtists auth)
+    cachedTop = App.memoize appState ("topArtists/" <> userId) Durations.day (Spotify.listTopArtists auth)
     getItems = fromMaybe [] . TopArtistsResponse.items
     makeNextRequest req res = do
       let count = length . fromMaybe [] . TopArtistsResponse.items $ res
@@ -92,7 +93,7 @@ getTopArtists appState auth userId term = listN cachedTop makeNextRequest getIte
 getTopTracks :: App.AppState -> T.Text -> T.Text -> SpotifyTermDuration -> Int -> IO [Track.Track]
 getTopTracks appState auth userId term = listN cachedTop makeNextRequest getItems (initialTopItemsRequest term)
   where
-    cachedTop = App.memoize appState ("topTracks/" <> userId) (hours 24) (Spotify.listTopTracks auth)
+    cachedTop = App.memoize appState ("topTracks/" <> userId) Durations.day (Spotify.listTopTracks auth)
     getItems = fromMaybe [] . TopTracksResponse.items
     makeNextRequest req res = do
       let count = length . getItems $ res
@@ -188,12 +189,6 @@ intervals (start, end) maxDuration
   where
     maxEndTime = addUTCTime maxDuration start
 
-hours :: Int -> NominalDiffTime
-hours = fromIntegral . (* (60 * 60))
-
-weeks :: Int -> NominalDiffTime
-weeks = hours . (* (24 * 7))
-
 findSpotifyArtists :: App.AppState -> T.Text -> T.Text -> Int -> Jobs.Job ([Artist.Artist], M.Map T.Text [Track.Track])
 findSpotifyArtists appState spotifyAuth userId spideringDepth = do
   Jobs.yieldStatus "Getting your top artists"
@@ -211,19 +206,19 @@ findSpotifyArtists appState spotifyAuth userId spideringDepth = do
     return $ long ++ medium ++ short
 
   Jobs.yieldStatus "Getting your followed artists"
-  let memoizedSavedArtists = App.memoize appState ("followedArtists/" <> userId) (hours 24) (getFollowedArtists spotifyAuth)
+  let memoizedSavedArtists = App.memoize appState ("followedArtists/" <> userId) Durations.day (getFollowedArtists spotifyAuth)
   followedArtists <- lift $ memoizedSavedArtists 5000
 
   Jobs.yieldStatus "Getting your saved tracks"
-  let memoizedSavedTracks = App.memoize appState ("savedTracks/" <> userId) (hours 24) (getSavedTracks spotifyAuth)
+  let memoizedSavedTracks = App.memoize appState ("savedTracks/" <> userId) Durations.day (getSavedTracks spotifyAuth)
   savedTracks <- lift $ memoizedSavedTracks 5000
 
   Jobs.yieldStatus "Finding some new music based on your top tracks"
-  let memoizedTrackRecs = App.memoize appState "recommendationsForTrack" (weeks 1) $ recommendationsForTrack spotifyAuth
+  let memoizedTrackRecs = App.memoize appState "recommendationsForTrack" Durations.week $ recommendationsForTrack spotifyAuth
   tracksFromTopTracks <- lift $ mapM memoizedTrackRecs (take spideringDepth topTracks)
 
   Jobs.yieldStatus "Finding some new music based on your top artists"
-  let memoizedArtistRecs = App.memoize appState "recommendationsForArtist" (weeks 1) $ recommendationsForArtist spotifyAuth
+  let memoizedArtistRecs = App.memoize appState "recommendationsForArtist" Durations.week $ recommendationsForArtist spotifyAuth
   tracksFromTopArtists <- lift $ mapM memoizedArtistRecs (take spideringDepth topArtists)
 
   let tracks = nubUsing Track.id $ topTracks ++ savedTracks ++ concat tracksFromTopTracks ++ concat tracksFromTopArtists
@@ -275,7 +270,7 @@ chooseTracksForArtists appState spotifyAuth artists tracksByArtistId = do
       then
         return $ take 3 knownTracks
       else do
-        let memoizedArtistTracks = App.memoize appState "artistTopTracks" (weeks 1) (Spotify.artistTopTracks spotifyAuth)
+        let memoizedArtistTracks = App.memoize appState "artistTopTracks" Durations.week (Spotify.artistTopTracks spotifyAuth)
         response <- lift $ memoizedArtistTracks $ GetArtistTopTracksRequest.GetArtistTopTracksRequest {GetArtistTopTracksRequest.artistId = Artist.id artist}
 
         -- Prefer the tracks that Spotify recommended.

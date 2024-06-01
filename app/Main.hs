@@ -3,6 +3,8 @@
 module Main (main) where
 
 import qualified App
+import qualified CommandLineArgs
+import Control.Exception (SomeException (..), fromException)
 import Control.Monad (when, (<=<))
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -12,20 +14,20 @@ import Control.Monad.Trans.Reader (ask, asks)
 import qualified CreatePlaylist
 import Data.Aeson (KeyValue ((.=)), eitherDecode, object)
 import qualified Data.ByteString.Lazy as B
-import Data.List (find)
-import Data.Maybe (fromJust, fromMaybe, isNothing)
+import Data.Maybe (fromJust, isNothing)
 import Data.Text (Text, stripPrefix)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text.Lazy as LazyText
-import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime, nominalDay)
+import Data.Time.Clock (UTCTime, addUTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUIDV4
+import qualified Durations as Durations
 import Env (Env (spotifyClientID))
 import qualified Env
-import Errors (ErrStatus (..), eitherIO, eitherStatusIO, maybeIO, maybeStatusIO, throwErr)
+import Errors (ErrStatus (..), eitherIO, eitherStatusIO, maybeStatusIO, throwErr)
 import qualified Jobs
 import qualified Locations
 import Network.HTTP.Types.Status (Status (statusMessage), status400, status403, status404, status500)
@@ -34,7 +36,6 @@ import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsRes
 import qualified Spotify
 import Storage (DiscoUser)
 import qualified Storage
-import Text.Read (readMaybe)
 import qualified Types.AuthenticateWithSpotifyRequest as AuthenticateWithSpotifyRequest
 import qualified Types.AuthenticateWithSpotifyResponse as AuthenticateWithSpotifyResponse
 import qualified Types.CreatePlaylistJobRequest as CreatePlaylistJobRequest
@@ -42,12 +43,10 @@ import qualified Types.GetSpotifyClientIdResponse as GetSpotifyClientIdResponse
 import qualified Types.Spotify.AuthenticateResponse as SpotifyAuthenticateResponse
 import qualified Types.Spotify.UserProfile as SpotifyUserProfile
 import qualified Types.SpotifyProfile as SpotifyProfile
-import qualified Types.Ticketmaster.ListArtistsResponse as ListArtistsResponse
 import qualified Types.Ticketmaster.SearchEventsRequest as SearchEventsRequest
+import Utils (maybeHead)
 import Web.Scotty (ActionM)
 import qualified Web.Scotty as S
-import Control.Exception (SomeException (..), fromException)
-import qualified CommandLineArgs
 
 main :: IO ()
 main = do
@@ -96,52 +95,6 @@ getSpotifyClientId = do
       { GetSpotifyClientIdResponse.clientId = clientId
       }
 
-queryParamMaybe :: LazyText.Text -> ActionM (Maybe LazyText.Text)
-queryParamMaybe name = do
-  params <- S.queryParams
-  return . fmap snd . find ((== name) . fst) $ params
-
-getEvents :: App.AppT ActionM ()
-getEvents = do
-  postalCode <- lift $ (S.queryParam "postalCode" :: ActionM Text)
-  postalCodeLookup <- App.postalCodeLookup <$> ask
-  ticketmasterConsumerKey <- App.ticketmasterConsumerKey <$> ask
-  geoHash <- liftIO $ eitherStatusIO status404 $ Locations.lookupGeoHash postalCodeLookup postalCode
-  radiusMiles <- lift $ (S.queryParam "radiusMiles" :: ActionM Int)
-  days <- lift $ (S.queryParam "days" :: ActionM Int)
-  startTime <- liftIO getCurrentTime
-  let endTime = addUTCTime (fromIntegral days * nominalDay) startTime
-
-  pageToken <- lift $ queryParamMaybe "pageToken"
-  let pageNumberMaybe = readMaybe . LazyText.unpack . fromMaybe "0" $ pageToken :: Maybe Int
-  pageNumber <- liftIO . maybeIO "failed to parse pageToken" $ pageNumberMaybe
-
-  events <-
-    liftIO $
-      CreatePlaylist.searchEvents
-        ticketmasterConsumerKey
-        SearchEventsRequest.SearchEventsRequest
-          { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash,
-            SearchEventsRequest.radiusMiles = radiusMiles,
-            SearchEventsRequest.classificationName = ["music"],
-            SearchEventsRequest.startTime = startTime,
-            SearchEventsRequest.endTime = endTime,
-            SearchEventsRequest.pageSize = 200,
-            SearchEventsRequest.pageNumber = pageNumber
-          }
-        50000
-
-  lift $ S.addHeader "Cache-Control" "no-store"
-  lift . S.json $ ListArtistsResponse.fromEvents events
-
-getGeoHash :: App.AppT ActionM ()
-getGeoHash = do
-  postalCode <- lift (S.queryParam "postalCode" :: ActionM Text)
-  postalCodeLookup <- App.postalCodeLookup <$> ask
-  geoHash <- liftIO $ eitherStatusIO status404 $ Locations.lookupGeoHash postalCodeLookup postalCode
-  lift $ S.addHeader "Cache-Control" "no-store"
-  lift . S.text $ LazyText.pack geoHash
-
 getPlaceName :: App.AppT ActionM ()
 getPlaceName = do
   postalCode <- lift (S.queryParam "postalCode" :: ActionM Text)
@@ -188,7 +141,7 @@ createDiscoveryJob = do
 
   let eventsReq =
         SearchEventsRequest.SearchEventsRequest
-          { SearchEventsRequest.geoHash = T.pack . take 9 $ geoHash,
+          { SearchEventsRequest.geoHash = T.pack geoHash,
             SearchEventsRequest.radiusMiles = radiusMiles,
             SearchEventsRequest.classificationName = ["music"],
             SearchEventsRequest.startTime = startTime,
@@ -292,8 +245,8 @@ getAuthWithRefreshLock user deadline = untilJust $ do
     if Storage.spotifyUserAuthRefreshing auth
       then return Nothing
       else do
-        -- Require that the auth token is valid for 5m.
-        let buffer = fromInteger (5 * 60) :: NominalDiffTime
+        -- Require that the auth token is valid for 10m.
+        let buffer = 10 * Durations.minute
         let isValid = Storage.spotifyUserAuthExpireTime auth > addUTCTime buffer now
         if isValid
           then return $ Just (auth, False)
@@ -316,10 +269,6 @@ getSpotifyAccessToken user = do
       let authResponseWithRefreshToken = authResponse {SpotifyAuthenticateResponse.refresh_token = Just refreshToken}
       _ <- App.runWithDB $ saveSpotifyAuth (Storage.discoUserSpotifyId user) authResponseWithRefreshToken
       return $ SpotifyAuthenticateResponse.access_token authResponse
-
-maybeHead :: [a] -> Maybe a
-maybeHead [] = Nothing
-maybeHead (x : _) = Just x
 
 getSpotifyProfile :: App.AppT ActionM ()
 getSpotifyProfile = do
@@ -350,10 +299,8 @@ routes appState = S.scotty (App.port appState) $ do
 
   S.post "/spotify/authenticate" $ App.runAppT appState authenticateWithSpotify
   S.get "/spotify/me" $ App.runAppT appState getSpotifyProfile
-
   S.get "/spotify/clientId" $ App.runAppT appState getSpotifyClientId
-  S.get "/geohash" $ App.runAppT appState getGeoHash
+
   S.get "/placeName" $ App.runAppT appState getPlaceName
-  S.get "/localArtists" $ App.runAppT appState getEvents
   S.post "/discoveryJobs" $ App.runAppT appState createDiscoveryJob
   S.get "/discoveryJobs/:id" $ App.runAppT appState getDiscoveryJob

@@ -8,6 +8,7 @@ where
 
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Time.Format (FormatTime, defaultTimeLocale, formatTime)
 import HTTP (get, queryParam)
 import Network.HTTP.Simple
@@ -25,7 +26,7 @@ searchEvents :: Text -> SearchEventsRequest.SearchEventsRequest -> IO SearchEven
 searchEvents apiKey req =
   ticketmasterGet "/events.json" $
     [ ("apikey", queryParam apiKey),
-      ("geoPoint", queryParam . SearchEventsRequest.geoHash $ req),
+      ("geoPoint", queryParam . T.take 9 . SearchEventsRequest.geoHash $ req),
       ("radius", queryParam . SearchEventsRequest.radiusMiles $ req),
       ("unit", queryParam ("miles" :: Text)),
       ("startDateTime", queryParam . timeString . SearchEventsRequest.startTime $ req),

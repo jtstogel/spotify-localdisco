@@ -28,6 +28,7 @@ import Network.HTTP.Simple
   )
 import Network.HTTP.Types.Status (status500)
 import Text.Read (readMaybe)
+import Utils (maybeHead)
 
 class QueryParam a where
   queryParam :: a -> Maybe ByteString
@@ -47,10 +48,6 @@ instance QueryParam Int where
 instance (QueryParam a) => QueryParam (Maybe a) where
   queryParam :: Maybe a -> Maybe ByteString
   queryParam = (>>= queryParam)
-
-maybeHead :: [a] -> Maybe a
-maybeHead [] = Nothing
-maybeHead (x : _) = Just x
 
 retryAfter :: Response a -> Maybe Int
 retryAfter response = do
