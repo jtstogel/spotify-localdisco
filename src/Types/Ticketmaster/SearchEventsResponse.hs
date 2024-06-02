@@ -25,7 +25,7 @@ newtype EmbeddedResponseDetails = EmbeddedResponseDetails
 
 data SearchEventsResponse = SearchEventsResponse
   { page :: PageObject,
-    _embedded :: EmbeddedResponseDetails
+    _embedded :: Maybe EmbeddedResponseDetails
   }
   deriving (Generic, Show)
 

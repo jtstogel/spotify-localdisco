@@ -13,3 +13,15 @@
   margin-bottom: 64px;
   color: var(--dark-color);
 }
+
+span.spinner {
+  margin: 36px auto 0px;
+  border-color: var(--dark-color);
+  border-bottom-color: transparent;
+  width: 48px;
+  height: 48px;
+}
+
+.error { 
+  margin: 36px auto 0px;
+}

@@ -46,6 +46,13 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
   };
 
   const artists = data.result?.artists ?? [];
+
+  if (artists.length === 0) {
+    return <div className={styles.container}>
+      <h4>No events found! 😕</h4>
+    </div>
+  }
+
   return <div className={styles.container}>
     <SpotifyButton onClick={openInSpotify} backgroundColor="#fff">Open in spotify</SpotifyButton>
     <h4>Your playlist contains artists like...</h4>
