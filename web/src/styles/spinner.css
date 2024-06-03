@@ -5,7 +5,7 @@
     height: 100%;
     border-width: 5px;
     border-style: solid;
-    border-color: #FFF;
+    border-color: var(--dark-color);
     border-bottom-color: transparent;
     border-radius: 50%;
     display: inline-block;
