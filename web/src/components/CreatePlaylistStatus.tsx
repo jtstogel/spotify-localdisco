@@ -54,7 +54,7 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
   }
 
   return <div className={styles.container}>
-    <SpotifyButton onClick={openInSpotify} backgroundColor="#fff">Open in spotify</SpotifyButton>
+    <SpotifyButton onClick={openInSpotify} backgroundColor="#fff">Open spotify</SpotifyButton>
     <h4>Your playlist contains artists like...</h4>
     <ul>
       {artists.slice(0, 10).map(a => <li>{a}</li>)}
