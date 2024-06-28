@@ -1,30 +1,26 @@
 @import '../vars.css';
 
-.loading:after {
-  overflow: hidden;
+.loading::after {
   display: inline-block;
-  vertical-align: bottom;
-  -webkit-animation: ellipsis steps(4, end) 2000ms infinite;
-  animation: ellipsis steps(4, end) 2000ms infinite;
-  content: "\2026";
-  /* ascii code for the ellipsis character */
-  width: 0px;
+  animation: ellipsis steps(1,end) 3s infinite;
+  content: '';
+  width: 3em;
+}
+
+.loading {
+  text-wrap: nowrap;
+}
+
+@keyframes ellipsis {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
 }
 
 .container {
   text-align: left;
   margin: auto;
   width: 80%;
-}
-
-@keyframes ellipsis {
-  to {
-    width: 1.5em;
-  }
-}
-
-@-webkit-keyframes ellipsis {
-  to {
-    width: 1.5em;
-  }
 }
