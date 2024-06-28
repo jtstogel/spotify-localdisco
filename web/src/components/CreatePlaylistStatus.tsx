@@ -67,7 +67,7 @@ function loadingText(text: string) {
   const words = text.split(' ');
   const lastWord = words.pop();
   const lastWordHtml = <span className={styles.loading}>{lastWord}</span>;
-  return !words.length ? lastWordHtml : <span>{words} {lastWordHtml}</span>;
+  return !words.length ? lastWordHtml : <span>{words.join(' ')} {lastWordHtml}</span>;
 }
 
 export default CreatePlaylistStatus
