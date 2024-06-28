@@ -24,7 +24,7 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
       <h4>Curating your playlist...</h4>
       <ul>
         {succeededStatuses.map(m => <li>{m} &#10003;</li>)}
-        {pendingStatus && <li><span className={styles.loading}>{pendingStatus}</span></li>}
+        {pendingStatus && <li>{loadingText(pendingStatus)}</li>}
       </ul>
     </div>
   }
@@ -61,6 +61,13 @@ const CreatePlaylistStatus = ({ name }: { name: string }) => {
       {artists.length > 10 && <li>And {artists.length - 10} more...</li>}
     </ul>
   </div>
+}
+
+function loadingText(text: string) {
+  const words = text.split(' ');
+  const lastWord = words.pop();
+  const lastWordHtml = <span className={styles.loading}>{lastWord}</span>;
+  return !words.length ? lastWordHtml : <span>{words} {lastWordHtml}</span>;
 }
 
 export default CreatePlaylistStatus
